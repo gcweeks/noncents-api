@@ -3,12 +3,6 @@ class Api::V1::UsersController < ApplicationController
   before_action :restrict_access
   before_action :set_user, only: [:show, :update, :destroy]
 
-  # GET /users
-  def index
-    @users = User.all
-    return render json: @users, status: :ok
-  end
-
   # GET /users/1
   def show
     return render json: @user, status: :ok

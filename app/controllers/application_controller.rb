@@ -8,7 +8,7 @@ class ApplicationController < ActionController::Base
   end
 
   def restrict_access
-    token = params[:access_token]
+    token = request.headers['Authorization']
     return head :unauthorized unless token
     @authed_user = User.where(token: token).first
     return head :unauthorized unless @authed_user

@@ -3,12 +3,6 @@ class Api::V1::AccountsController < ApplicationController
   before_action :restrict_access
   before_action :set_account, only: [:show, :update, :destroy]
 
-  # GET /accounts
-  def index
-    @accounts = Account.all
-    return render json: @accounts, status: :ok
-  end
-
   # GET /accounts/1
   def show
     return render json: @account, status: :ok

@@ -3,12 +3,6 @@ class Api::V1::BanksController < ApplicationController
   before_action :restrict_access
   before_action :set_bank, only: [:show, :update, :destroy]
 
-  # GET /banks
-  def index
-    @banks = Bank.all
-    return render json: @banks, status: :ok
-  end
-
   # GET /banks/1
   def show
     return render json: @bank, status: :ok

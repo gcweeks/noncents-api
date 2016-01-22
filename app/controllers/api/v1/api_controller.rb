@@ -20,7 +20,7 @@ class Api::V1::ApiController < ApplicationController
     render json: {"body" => "GET Request"}, status: :ok
   end
   def request_post
-    render json: {"body" => "POST Request:\n\n#{request.body.read}\n"}, status: :ok
+    render json: {"body" => "POST Request: #{request.body.read}"}, status: :ok
   end
   def auth
     # Alternative to users_get call that returns the User token in addition to

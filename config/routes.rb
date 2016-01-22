@@ -3,9 +3,9 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :users, except: [:new, :edit]
-      resources :accounts, except: [:new, :edit]
-      resources :banks, except: [:new, :edit]
+      resources :users, except: [:index, :new, :edit]
+      resources :accounts, except: [:index, :new, :edit]
+      resources :banks, except: [:index, :new, :edit]
 
       # Calls that do not requre an access token
       get  '/'               => 'api#request_get'
