@@ -3,7 +3,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :users, except: [:index, :new, :edit]
+      resources :users, except: [:index, :create, :new, :edit]
       resources :accounts, except: [:index, :new, :edit]
       resources :banks, except: [:index, :new, :edit]
 
