@@ -1,4 +1,8 @@
 class User < ActiveRecord::Base
+  has_many :accounts
+  has_many :vices
+  has_many :user_friends
+  has_many :friends, through: :user_friends
   BASE58_ALPHABET = ('0'..'9').to_a  + ('A'..'Z').to_a + ('a'..'z').to_a - ['0', 'O', 'I', 'l']
 
   def as_json(options={})
