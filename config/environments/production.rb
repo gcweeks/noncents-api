@@ -77,9 +77,3 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 end
-
-Plaid.config do |p|
-  p.customer_id = '5672296b795b36cc730ba6b5'
-  p.secret = 'c0704f2af851cd5996579b70327700'
-  p.environment_location = 'https://tartan.plaid.com/'
-end
