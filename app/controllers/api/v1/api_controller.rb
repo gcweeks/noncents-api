@@ -63,6 +63,7 @@ class Api::V1::ApiController < ApplicationController
     unless confirm_code(params[:number], params[:code])
       return render json: {"confirmation" => "rejected"}, status: :ok
     end
+
     # See if User exists already
     user = User.where(number: params[:number]).first
     unless user
@@ -79,6 +80,7 @@ class Api::V1::ApiController < ApplicationController
       user.generate_token!
       user.save!
     end
+
     # Send User model with token
     return render json: user.with_token, status: :ok
   end
@@ -95,6 +97,44 @@ class Api::V1::ApiController < ApplicationController
 # Calls requiring access_token
 ###############################################################################
   def test
+    # Get Plaid user
+    begin
+      plaid_user = Plaid.add_user('auth', 'plaid_test', 'plaid_good', 'wells')
+    rescue Plaid::PlaidError => e
+      return render json: {
+        "code" => e.code,
+        "message" => e.message,
+        "resolve" => e.resolve
+        }, status: :unauthorized
+    end
+
+    unless @authed_user.accounts
+      @authed_user.accounts = []
+    end
+    user_accounts = @authed_user.accounts
+
+    plaid_user.accounts.each do |plaid_account|
+      catch :has_account do
+        user_accounts.each do |user_account|
+          if plaid_account.id == user_account.plaid_id
+            throw :has_account
+          end
+        end
+        new_account = @authed_user.accounts.create()
+        new_account.plaid_id = plaid_account.id
+        new_account.name = plaid_account.name
+        new_account.account_type = plaid_account.type
+        new_account.account_subtype = plaid_account.subtype
+        new_account.institution = plaid_account.institution_type
+        new_account.routing_num = plaid_account.numbers['routing']
+        new_account.account_num = plaid_account.numbers['account']
+        unless new_account.valid?
+          return render json: new_account.errors.messages, status: :internal_server_error
+        end
+        new_account.save!
+      end
+    end
+
     return render json: @authed_user, status: :ok
   end
 end
