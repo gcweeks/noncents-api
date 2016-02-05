@@ -28,13 +28,13 @@ class Api::V1::ApiController < ApplicationController
     if params[:code].blank?
       return render text: "This call requires a confirmation code", status: :bad_request
     end
-    if params[:number].blank?
-      return render text: "This call requires a phone number", status: :bad_request
+    if params[:user][:number].blank?
+      return render text: "This call requires a phone number (user[number])", status: :bad_request
     end
-    unless confirm_code(params[:number], params[:code])
+    unless confirm_code(params[:user][:number], params[:code])
       return render json: {"confirmation" => "rejected"}, status: :ok
     end
-    user = User.where(number: params[:number]).first
+    user = User.where(number: params[:user][:number]).first
     return head :not_found unless user
     if user.token.blank?
       # Generate access token for User
@@ -57,10 +57,10 @@ class Api::V1::ApiController < ApplicationController
     if params[:code].blank?
       return render text: "This call requires a confirmation code", status: :bad_request
     end
-    if (params[:number].blank? || params[:fname].blank? || params[:lname].blank?)
-      return render text: "This call requires a name and phone number", status: :bad_request
+    if (params[:user][:number].blank? || params[:user][:fname].blank? || params[:user][:lname].blank?)
+      return render text: "This call requires a name (user[fname], user[lname]) and phone number (user[number])", status: :bad_request
     end
-    unless confirm_code(params[:number], params[:code])
+    unless confirm_code(params[:user][:number], params[:code])
       return render json: {"confirmation" => "rejected"}, status: :ok
     end
 
@@ -69,9 +69,9 @@ class Api::V1::ApiController < ApplicationController
     unless user
       # Create new User
       user = User.create()
-      user.fname = params[:fname].strip
-      user.lname = params[:lname].strip
-      user.number = params[:number]
+      user.fname = params[:user][:fname].strip
+      user.lname = params[:user][:lname].strip
+      user.number = params[:user][:number]
       user.generate_token!
       user.save!
     end

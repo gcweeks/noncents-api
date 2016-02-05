@@ -3,33 +3,22 @@ class Api::V1::UsersController < ApplicationController
   before_action :restrict_access
   before_action :set_user, only: [:show, :update, :destroy]
 
-  # GET /users/1
-  def show
-    return render json: @user, status: :ok
+  # GET /users/me
+  def get_me
+    return render json: @authed_user, status: :ok
   end
 
-  # PATCH/PUT /users/1
-  def update
-    if @user.update(user_params)
-      return render json: @user, status: :ok
+  # PATCH/PUT /users/me
+  def update_me
+    if @authed_user.update!(user_params)
+      return render json: @authed_user, status: :ok
     else
-      return render json: @user.errors, status: :unprocessable_entity
+      return render json: @authed_user.errors, status: :unprocessable_entity
     end
-  end
-
-  # DELETE /users/1
-  def destroy
-    @user.destroy
-    return head :no_content
   end
 
   private
-    def set_user
-      @user = User.find(params[:id])
-    end
-
     def user_params
-      params.require(:user).permit(:number, :fname, :lname, :address, :city,
-        :state, :zip, :dob, :token)
+      params.require(:user).permit(:fname, :lname, :number, :dob, :email, :invest_percent)
     end
 end

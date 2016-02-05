@@ -3,7 +3,6 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
-      resources :users, except: [:index, :create, :new, :edit]
       resources :accounts, except: [:index, :new, :edit]
       resources :banks, except: [:index, :new, :edit]
 
@@ -18,6 +17,12 @@ Rails.application.routes.draw do
 
       # Calls that require an access token
       get 'test' => 'api#test' # A test call to verify you are authenticated
+
+      # Model-specific calls
+      scope 'users' do
+        get 'me' => 'users#get_me'
+        put 'me' => 'users#update_me'
+      end
     end
   end
 end

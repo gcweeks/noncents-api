@@ -42,7 +42,7 @@ end
 # }
 # institution_type: String ("fake_institution")
 # available_balance: Decimal (1234.56)
-# current_balance: Decimal
+# current_balance: Decimal (1234.56)
 # subtype: String ("savings")
 # numbers(AUTH): {
 #   routing: Integer (021000021)
