@@ -25,65 +25,107 @@ class Api::V1::ApiController < ApplicationController
   def auth
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
-    if params[:code].blank?
-      return render text: "This call requires a confirmation code", status: :bad_request
+    if params[:user][:email].blank?
+      return render text: "This call requires an email address (user[email])", status: :bad_request
     end
-    if params[:user][:number].blank?
-      return render text: "This call requires a phone number (user[number])", status: :bad_request
+    if params[:user][:password].blank?
+      return render text: "This call requires a password (user[password])", status: :bad_request
     end
-    unless confirm_code(params[:user][:number], params[:code])
-      return render json: {"confirmation" => "rejected"}, status: :ok
-    end
-    user = User.where(number: params[:user][:number]).first
+    user = User.where(email: params[:user][:email]).first
     return head :not_found unless user
+    user = user.try(:authenticate, params[:user][:password])
+    unless user
+      return render json: {"status" => "rejected"}, status: :ok
+    end
     if user.token.blank?
       # Generate access token for User
       user.generate_token!
       user.save!
     end
     # Send User model with token
-    return render json: user.with_token, status: :ok
-  end
-  def confirmation
-    return head :bad_request if params[:number].blank?
-    if sms_send_confirmation(params[:number])
-      return render json: {"confirmation" => "sent"}, status: :ok
-    end
-    return render json: {"confirmation" => "invalid"}, status: :ok
+    render json: user.with_token, status: :ok
   end
   def signup
-    # Replacement for users_post call so that the server is responsible for
+    # Replacement for POST /users call so that the server is responsible for
     # populating User data.
-    if params[:code].blank?
-      return render text: "This call requires a confirmation code", status: :bad_request
-    end
-    if (params[:user][:number].blank? || params[:user][:fname].blank? || params[:user][:lname].blank?)
-      return render text: "This call requires a name (user[fname], user[lname]) and phone number (user[number])", status: :bad_request
-    end
-    unless confirm_code(params[:user][:number], params[:code])
-      return render json: {"confirmation" => "rejected"}, status: :ok
-    end
 
     # See if User exists already
-    user = User.where(number: params[:number]).first
-    unless user
-      # Create new User
-      user = User.create()
-      user.fname = params[:user][:fname].strip
-      user.lname = params[:user][:lname].strip
-      user.number = params[:user][:number]
-      user.generate_token!
-      user.save!
-    end
-    unless user.token
-      # Generate access token for User
-      user.generate_token!
-      user.save!
+    user = User.where(email: params[:user][:email]).first
+    if user
+      return render json: {"status" => "exists"}, status: :ok
     end
 
-    # Send User model with token
-    return render json: user.with_token, status: :ok
+    # Create new User
+    user = User.create(user_params)
+    user.generate_token!
+    if user.save
+      # Send User model with token
+      return render json: user.with_token, status: :ok
+    end
+    render json: user.errors, status: :unprocessable_entity
   end
+  # def phone_auth
+  #   # Alternative to users_get call that returns the User token in addition to
+  #   # the rest of the model, provided proper authentication is given.
+  #   if params[:code].blank?
+  #     return render text: "This call requires a confirmation code", status: :bad_request
+  #   end
+  #   if params[:user][:number].blank?
+  #     return render text: "This call requires a phone number (user[number])", status: :bad_request
+  #   end
+  #   unless confirm_code(params[:user][:number], params[:code])
+  #     return render json: {"confirmation" => "rejected"}, status: :ok
+  #   end
+  #   user = User.where(number: params[:user][:number]).first
+  #   return head :not_found unless user
+  #   if user.token.blank?
+  #     # Generate access token for User
+  #     user.generate_token!
+  #     user.save!
+  #   end
+  #   # Send User model with token
+  #   return render json: user.with_token, status: :ok
+  # end
+  # def confirmation
+  #   return head :bad_request if params[:number].blank?
+  #   if sms_send_confirmation(params[:number])
+  #     return render json: {"confirmation" => "sent"}, status: :ok
+  #   end
+  #   return render json: {"confirmation" => "invalid"}, status: :ok
+  # end
+  # def phone_signup
+  #   # Replacement for users_post call so that the server is responsible for
+  #   # populating User data.
+  #   if params[:code].blank?
+  #     return render text: "This call requires a confirmation code", status: :bad_request
+  #   end
+  #   if (params[:user][:number].blank? || params[:user][:fname].blank? || params[:user][:lname].blank?)
+  #     return render text: "This call requires a name (user[fname], user[lname]) and phone number (user[number])", status: :bad_request
+  #   end
+  #   unless confirm_code(params[:user][:number], params[:code])
+  #     return render json: {"confirmation" => "rejected"}, status: :ok
+  #   end
+  #
+  #   # See if User exists already
+  #   user = User.where(number: params[:number]).first
+  #   unless user
+  #     # Create new User
+  #     user = User.create()
+  #     user.fname = params[:user][:fname].strip
+  #     user.lname = params[:user][:lname].strip
+  #     user.number = params[:user][:number]
+  #     user.generate_token!
+  #     user.save!
+  #   end
+  #   unless user.token
+  #     # Generate access token for User
+  #     user.generate_token!
+  #     user.save!
+  #   end
+  #
+  #   # Send User model with token
+  #   return render json: user.with_token, status: :ok
+  # end
   def twilio_callback
     # sender = params[:From]
     # body = params[:Body]
@@ -136,5 +178,10 @@ class Api::V1::ApiController < ApplicationController
     end
 
     return render json: @authed_user, status: :ok
+  end
+
+private
+  def user_params
+    params.require(:user).permit(:fname, :lname, :password, :number, :dob, :email, :invest_percent)
   end
 end

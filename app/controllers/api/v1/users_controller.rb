@@ -16,9 +16,4 @@ class Api::V1::UsersController < ApplicationController
       return render json: @authed_user.errors, status: :unprocessable_entity
     end
   end
-
-  private
-    def user_params
-      params.require(:user).permit(:fname, :lname, :number, :dob, :email, :invest_percent)
-    end
 end
