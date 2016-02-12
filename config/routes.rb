@@ -20,8 +20,13 @@ Rails.application.routes.draw do
 
       # Model-specific calls
       scope 'users' do
-        get 'me' => 'users#get_me'
-        put 'me' => 'users#update_me'
+        post 'reload' => 'users#reload'
+        get  'me' => 'users#get_me'
+        put  'me' => 'users#update_me'
+      end
+
+      scope 'vices' do
+        post 'reload' => 'vices#reload'
       end
     end
   end

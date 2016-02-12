@@ -5,16 +5,17 @@ module ApiHelper
 
   def confirm_code(number, code)
     # Test User case:
-    return true if (number=="+15555552016" && code=="2016")
+    return true if number == '+15555552016' && code == '2016'
     # Get possible codes
     current_code = generate_confirmation(number, false)
     late_code = generate_confirmation(number, true)
-    return (code==current_code || code==late_code)
+    code == current_code || code == late_code
   end
+
   def sms_send_confirmation(number)
     code = generate_confirmation(number, false)
-    body = "Your confirmation code is "+code+".\nDimention.co"
-    return send_twilio_sms(number, body)
+    body = 'Your confirmation code is ' + code + '.\nDimention.co'
+    send_twilio_sms(number, body)
   end
 
   private
@@ -32,6 +33,6 @@ module ApiHelper
     digest = Digest::SHA256.hexdigest(str)
     # Convert to decimal 6-digit number
     code = digest.to_i(16).to_s(10)[9..14]
-    return code
+    code
   end
 end

@@ -2,7 +2,7 @@ class Api::V1::ApiController < ApplicationController
   include ApiHelper
 
   before_action :init
-  before_action :restrict_access, :except => [
+  before_action :restrict_access, except: [
     # List of route methods that do not need authentication
     :request_get,
     :request_post,
@@ -13,32 +13,34 @@ class Api::V1::ApiController < ApplicationController
     :version_ios
   ]
 
-###############################################################################
-# Calls that don't require access_token
-###############################################################################
+  ##############################################################################
+  # Calls that don't require access_token
+  ##############################################################################
   def request_get
-    render json: {"body" => "GET Request"}, status: :ok
+    render json: { 'body' => 'GET Request' }, status: :ok
   end
+
   def request_post
-    render json: {"body" => "POST Request: #{request.body.read}"}, status: :ok
+    render json: { 'body' => "POST Request: #{request.body.read}" }, status: :ok
   end
+
   def auth
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
 
     if params[:user][:email].blank?
-      errors = {email: ["cannot be blank"]}
+      errors = { email: ['cannot be blank'] }
       return render json: errors, status: :bad_request
     end
     if params[:user][:password].blank?
-      errors = {password: ["cannot be blank"]}
+      errors = { password: ['cannot be blank'] }
       return render json: errors, status: :bad_request
     end
     user = User.where(email: params[:user][:email]).first
     return head :not_found unless user
     user = user.try(:authenticate, params[:user][:password])
     unless user
-      errors = {password: ["is incorrect"]}
+      errors = { password: ['is incorrect'] }
       return render json: errors, status: :unauthorized
     end
     if user.token.blank?
@@ -49,6 +51,7 @@ class Api::V1::ApiController < ApplicationController
     # Send User model with token
     render json: user.with_token, status: :ok
   end
+
   def signup
     # Replacement for POST /users call so that the server is responsible for
     # populating User data.
@@ -66,10 +69,12 @@ class Api::V1::ApiController < ApplicationController
   #   # Alternative to users_get call that returns the User token in addition to
   #   # the rest of the model, provided proper authentication is given.
   #   if params[:code].blank?
-  #     return render text: "This call requires a confirmation code", status: :bad_request
+  #     return render text: "This call requires a confirmation code", status:
+  #       :bad_request
   #   end
   #   if params[:user][:number].blank?
-  #     return render text: "This call requires a phone number (user[number])", status: :bad_request
+  #     return render text: "This call requires a phone number (user[number])",
+  #       status: :bad_request
   #   end
   #   unless confirm_code(params[:user][:number], params[:code])
   #     return render json: {"confirmation" => "rejected"}, status: :ok
@@ -95,10 +100,14 @@ class Api::V1::ApiController < ApplicationController
   #   # Replacement for users_post call so that the server is responsible for
   #   # populating User data.
   #   if params[:code].blank?
-  #     return render text: "This call requires a confirmation code", status: :bad_request
+  #     return render text: "This call requires a confirmation code", status:
+  #       :bad_request
   #   end
-  #   if (params[:user][:number].blank? || params[:user][:fname].blank? || params[:user][:lname].blank?)
-  #     return render text: "This call requires a name (user[fname], user[lname]) and phone number (user[number])", status: :bad_request
+  #   if (params[:user][:number].blank? || params[:user][:fname].blank? ||
+  #     params[:user][:lname].blank?)
+  #
+  #     return render text: "This call requires a name (user[fname],
+  #       user[lname]) and phone number (user[number])", status: :bad_request
   #   end
   #   unless confirm_code(params[:user][:number], params[:code])
   #     return render json: {"confirmation" => "rejected"}, status: :ok
@@ -124,43 +133,41 @@ class Api::V1::ApiController < ApplicationController
   #   # Send User model with token
   #   return render json: user.with_token, status: :ok
   # end
+
   def twilio_callback
     # sender = params[:From]
     # body = params[:Body]
     # return render text: ""
   end
+
   def version_ios
-    render json: {"version" => "0.0.1"}, status: :ok
+    render json: { 'version' => '0.0.1' }, status: :ok
   end
 
-###############################################################################
-# Calls requiring access_token
-###############################################################################
+  ##############################################################################
+  # Calls requiring access_token
+  ##############################################################################
   def test
     # Get Plaid user
     begin
       plaid_user = Plaid.add_user('auth', 'plaid_test', 'plaid_good', 'wells')
     rescue Plaid::PlaidError => e
       return render json: {
-        "code" => e.code,
-        "message" => e.message,
-        "resolve" => e.resolve
-        }, status: :unauthorized
+        'code' => e.code,
+        'message' => e.message,
+        'resolve' => e.resolve
+      }, status: :unauthorized
     end
 
-    unless @authed_user.accounts
-      @authed_user.accounts = []
-    end
+    @authed_user.accounts = [] unless @authed_user.accounts
     user_accounts = @authed_user.accounts
 
     plaid_user.accounts.each do |plaid_account|
       catch :has_account do
         user_accounts.each do |user_account|
-          if plaid_account.id == user_account.plaid_id
-            throw :has_account
-          end
+          throw :has_account if plaid_account.id == user_account.plaid_id
         end
-        new_account = @authed_user.accounts.create()
+        new_account = @authed_user.accounts.create
         new_account.plaid_id = plaid_account.id
         new_account.name = plaid_account.name
         new_account.account_type = plaid_account.type
@@ -169,17 +176,20 @@ class Api::V1::ApiController < ApplicationController
         new_account.routing_num = plaid_account.numbers['routing']
         new_account.account_num = plaid_account.numbers['account']
         unless new_account.valid?
-          return render json: new_account.errors.messages, status: :internal_server_error
+          return render json: new_account.errors.messages, status:
+            :internal_server_error
         end
         new_account.save!
       end
     end
 
-    return render json: @authed_user, status: :ok
+    render json: @authed_user, status: :ok
   end
 
-private
+  private
+
   def user_params
-    params.require(:user).permit(:fname, :lname, :password, :number, :dob, :email, :invest_percent)
+    params.require(:user).permit(:fname, :lname, :password, :number, :dob,
+                                 :email, :invest_percent)
   end
 end

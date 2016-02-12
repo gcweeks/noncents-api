@@ -5,15 +5,14 @@ class Api::V1::UsersController < ApplicationController
 
   # GET /users/me
   def get_me
-    return render json: @authed_user, status: :ok
+    render json: @authed_user, status: :ok
   end
 
   # PATCH/PUT /users/me
   def update_me
     if @authed_user.update!(user_params)
       return render json: @authed_user, status: :ok
-    else
-      return render json: @authed_user.errors, status: :unprocessable_entity
     end
+    render json: @authed_user.errors, status: :unprocessable_entity
   end
 end

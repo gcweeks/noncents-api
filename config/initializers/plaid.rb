@@ -49,7 +49,7 @@ end
 #   account: Integer (9900009606)
 #   wireRouting: Integer (021000021)
 # }
-# numbers(CONNECT): "Upgrade user to access routing information for this account"
+# numbers(CONNECT):"Upgrade user to access routing information for this account"
 #
 #
 ## Transaction

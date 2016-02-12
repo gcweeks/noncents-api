@@ -5,7 +5,7 @@ class Api::V1::AccountsController < ApplicationController
 
   # GET /accounts/1
   def show
-    return render json: @account, status: :ok
+    render json: @account, status: :ok
   end
 
   # POST /accounts
@@ -21,35 +21,30 @@ class Api::V1::AccountsController < ApplicationController
     # end
     @account = @user.accounts.new(account_params)
 
-    if @account.save
-      return render json: @account, status: :created
-    else
-      return render json: @account.errors, status: :unprocessable_entity
-    end
+    return render json: @account, status: :created if @account.save
+    render json: @account.errors, status: :unprocessable_entity
   end
 
   # PATCH/PUT /accounts/1
   def update
-    if @account.update(account_params)
-      return render json: @account, status: :ok
-    else
-      return render json: @account.errors, status: :unprocessable_entity
-    end
+    return render json: @account, status: :ok if @account.update(account_params)
+    render json: @account.errors, status: :unprocessable_entity
   end
 
   # DELETE /accounts/1
   def destroy
     @account.destroy
-    return head :no_content
+    head :no_content
   end
 
   private
-    def set_account
-      @account = Account.find(params[:id])
-    end
 
-    def account_params
-      params.require(:account).permit(:user_id, :acctNum, :routNum, :cardNum, :cardName,
-        :expMonth, :expYear, :zipcode)
-    end
+  def set_account
+    @account = Account.find(params[:id])
+  end
+
+  def account_params
+    params.require(:account).permit(:user_id, :acctNum, :routNum, :cardNum,
+                                    :cardName, :expMonth, :expYear, :zipcode)
+  end
 end
