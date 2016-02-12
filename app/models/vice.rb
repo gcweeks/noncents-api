@@ -1,3 +1,4 @@
 class Vice < ActiveRecord::Base
-  belongs_to :user
+  has_many :user_vices
+  has_many :users, through: :user_vices
 end

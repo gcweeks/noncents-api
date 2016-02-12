@@ -25,17 +25,21 @@ class Api::V1::ApiController < ApplicationController
   def auth
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
+
     if params[:user][:email].blank?
-      return render text: "This call requires an email address (user[email])", status: :bad_request
+      errors = {email: ["cannot be blank"]}
+      return render json: errors, status: :bad_request
     end
     if params[:user][:password].blank?
-      return render text: "This call requires a password (user[password])", status: :bad_request
+      errors = {password: ["cannot be blank"]}
+      return render json: errors, status: :bad_request
     end
     user = User.where(email: params[:user][:email]).first
     return head :not_found unless user
     user = user.try(:authenticate, params[:user][:password])
     unless user
-      return render json: {"status" => "rejected"}, status: :ok
+      errors = {password: ["is incorrect"]}
+      return render json: errors, status: :unauthorized
     end
     if user.token.blank?
       # Generate access token for User
@@ -48,12 +52,6 @@ class Api::V1::ApiController < ApplicationController
   def signup
     # Replacement for POST /users call so that the server is responsible for
     # populating User data.
-
-    # See if User exists already
-    user = User.where(email: params[:user][:email]).first
-    if user
-      return render json: {"status" => "exists"}, status: :ok
-    end
 
     # Create new User
     user = User.create(user_params)
