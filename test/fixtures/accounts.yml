@@ -1,21 +1,12 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  user_id: 
-  acctNum: MyString
-  routNum: MyString
-  cardNum: MyString
-  cardName: MyString
-  expMonth: 1
-  expYear: 1
-  zipcode: MyString
-
-two:
-  user_id: 
-  acctNum: MyString
-  routNum: MyString
-  cardNum: MyString
-  cardName: MyString
-  expMonth: 1
-  expYear: 1
-  zipcode: MyString
+  plaid_id: MyString
+  name: MyString
+  institution: MyString
+  available_balance: 1
+  current_balance: 1
+  account_num: 12345678
+  routing_num: 12345
+  account_type: MyString
+  account_subtype: MyString

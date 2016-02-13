@@ -57,7 +57,7 @@ class Api::V1::ApiController < ApplicationController
     # populating User data.
 
     # Create new User
-    user = User.create(user_params)
+    user = User.new(user_params)
     user.generate_token!
     if user.save
       # Send User model with token
@@ -117,7 +117,7 @@ class Api::V1::ApiController < ApplicationController
   #   user = User.where(number: params[:number]).first
   #   unless user
   #     # Create new User
-  #     user = User.create()
+  #     user = User.new
   #     user.fname = params[:user][:fname].strip
   #     user.lname = params[:user][:lname].strip
   #     user.number = params[:user][:number]
@@ -167,7 +167,7 @@ class Api::V1::ApiController < ApplicationController
         user_accounts.each do |user_account|
           throw :has_account if plaid_account.id == user_account.plaid_id
         end
-        new_account = @authed_user.accounts.create
+        new_account = @authed_user.accounts.new
         new_account.plaid_id = plaid_account.id
         new_account.name = plaid_account.name
         new_account.account_type = plaid_account.type

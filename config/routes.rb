@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  resources :users
+  resources :users
   match '/404' => 'errors#error404', via: [:get, :post, :patch, :delete]
 
   namespace :api do
@@ -20,13 +22,8 @@ Rails.application.routes.draw do
 
       # Model-specific calls
       scope 'users' do
-        post 'reload' => 'users#reload'
         get  'me' => 'users#get_me'
         put  'me' => 'users#update_me'
-      end
-
-      scope 'vices' do
-        post 'reload' => 'vices#reload'
       end
     end
   end
