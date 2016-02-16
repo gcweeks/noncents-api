@@ -1,9 +1,8 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 cashmoney:
-  fname: Cash
-  lname: Money
-  number: +15555552016
-  token: MyToken
-  email: cashmoney@gmail.com
+  fname: 'Cash'
+  lname: 'Money'
+  number: '+15555552016'
+  email: 'cashmoney@gmail.com'
   dob: <%= Date.today %>

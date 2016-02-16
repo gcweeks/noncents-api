@@ -8,6 +8,8 @@ Style/AccessorMethodName:
 Style/VariableName:
   Enabled: false
 
+Metrics/ClassLength:
+  Enabled: false
 Metrics/MethodLength:
   Enabled: false
 Metrics/AbcSize:
