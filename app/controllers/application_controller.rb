@@ -19,6 +19,6 @@ class ApplicationController < ActionController::Base
   end
 
   def staging_server?
-    ENV['DOMAIN'] != "dimention.co"
+    ENV['DOMAIN'] != 'dimention.co'
   end
 end

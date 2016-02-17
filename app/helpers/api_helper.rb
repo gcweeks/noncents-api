@@ -22,8 +22,7 @@ module ApiHelper
 
   def generate_confirmation(number, late)
     # Get current hour for hash
-    now = DateTime.now
-    now = DateTime.new(now.year, now.month, now.day, now.hour, 0, 0)
+    now = Time.current.beginning_of_hour
     # Consider confirmation codes where the hour changes before the user
     # can confirm it
     now -= 1.hour if late
