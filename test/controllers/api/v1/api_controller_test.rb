@@ -25,7 +25,7 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
   test 'should auth' do
     get :auth, user: { email: @user.email, password: 'incorrect' }
     assert_response :unauthorized
-    get :auth, user: { email: 'no@such.email', password: 'incorrect' }
+    get :auth, user: { email: 'does@not.exist', password: 'incorrect' }
     assert_response :not_found
     get :auth, user: { email: @user.email, password: @user.password }
     assert_response :success
@@ -33,105 +33,16 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
     assert_equal @user.token, res['token']
   end
 
-  test 'should signup' do
-    # Missing email
-    post :signup, user: { password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Invalid email
-    post :signup, user: { email: 'bad@email',
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Existing email
-    post :signup, user: { email: @user.email,
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Missing password
-    post :signup, user: { email: 'new@email.com',
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Invalid password
-    post :signup, user: { email: 'new@email.com',
-                          password: 'short',
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Missing fname
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Missing lname
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          fname: @user.fname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Invalid invest_percent
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: -1,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Invalid invest_percent
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: 101,
-                          dob: @user.dob
-                        }
-    assert_response :unprocessable_entity
-    # Missing dob
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent
-                        }
-    assert_response :unprocessable_entity
-    # Valid User
-    post :signup, user: { email: 'new@email.com',
-                          password: @user.password,
-                          fname: @user.fname,
-                          lname: @user.lname,
-                          invest_percent: @user.invest_percent,
-                          dob: @user.dob
-                        }
+  test 'should check email' do
+    get :check_email, email: 'does@not.exist'
     assert_response :success
-
-    # Check Token
     res = JSON.parse(@response.body)
-    assert_equal 24, res['token'].length
+    assert_equal 'does not exist', res['email']
+
+    get :check_email, email: @user.email
+    assert_response :success
+    res = JSON.parse(@response.body)
+    assert_equal 'exists', res['email']
   end
 
   test 'should get version' do

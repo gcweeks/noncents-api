@@ -5,6 +5,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      resources :users, only: [:create]
       resources :accounts, except: [:index, :new, :edit]
       resources :banks, except: [:index, :new, :edit]
 
@@ -13,7 +14,7 @@ Rails.application.routes.draw do
       post '/'               => 'api#request_post'
       get  'auth'            => 'api#auth'
       post 'confirmation'    => 'api#confirmation'
-      post 'signup'          => 'api#signup'
+      get  'check_email'     => 'api#check_email'
       get  'version/ios'     => 'api#version_ios'
       get  'twilio_callback' => 'api#twilio_callback'
 

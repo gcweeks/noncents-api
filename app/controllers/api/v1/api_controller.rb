@@ -1,3 +1,4 @@
+
 class Api::V1::ApiController < ApplicationController
   include ApiHelper
 
@@ -7,8 +8,8 @@ class Api::V1::ApiController < ApplicationController
     :request_get,
     :request_post,
     :auth,
-    :confirmation,
     :signup,
+    :check_email,
     :twilio_callback,
     :version_ios
   ]
@@ -52,87 +53,11 @@ class Api::V1::ApiController < ApplicationController
     render json: user.with_token, status: :ok
   end
 
-  def signup
-    # Replacement for POST /users call so that the server is responsible for
-    # populating User data.
-
-    # Create new User
-    user = User.new(user_params)
-    user.generate_token!
-    if user.save
-      # Send User model with token
-      return render json: user.with_token, status: :ok
-    end
-    render json: user.errors, status: :unprocessable_entity
+  def check_email
+    user = User.where(email: params[:email]).first
+    return render json: { 'email' => 'exists' }, status: :ok if user
+    render json: { 'email' => 'does not exist' }, status: :ok
   end
-  # def phone_auth
-  #   # Alternative to users_get call that returns the User token in addition to
-  #   # the rest of the model, provided proper authentication is given.
-  #   if params[:code].blank?
-  #     return render text: "This call requires a confirmation code", status:
-  #       :bad_request
-  #   end
-  #   if params[:user][:number].blank?
-  #     return render text: "This call requires a phone number (user[number])",
-  #       status: :bad_request
-  #   end
-  #   unless confirm_code(params[:user][:number], params[:code])
-  #     return render json: {"confirmation" => "rejected"}, status: :ok
-  #   end
-  #   user = User.where(number: params[:user][:number]).first
-  #   return head :not_found unless user
-  #   if user.token.blank?
-  #     # Generate access token for User
-  #     user.generate_token!
-  #     user.save!
-  #   end
-  #   # Send User model with token
-  #   return render json: user.with_token, status: :ok
-  # end
-  # def confirmation
-  #   return head :bad_request if params[:number].blank?
-  #   if sms_send_confirmation(params[:number])
-  #     return render json: {"confirmation" => "sent"}, status: :ok
-  #   end
-  #   return render json: {"confirmation" => "invalid"}, status: :ok
-  # end
-  # def phone_signup
-  #   # Replacement for users_post call so that the server is responsible for
-  #   # populating User data.
-  #   if params[:code].blank?
-  #     return render text: "This call requires a confirmation code", status:
-  #       :bad_request
-  #   end
-  #   if (params[:user][:number].blank? || params[:user][:fname].blank? ||
-  #     params[:user][:lname].blank?)
-  #
-  #     return render text: "This call requires a name (user[fname],
-  #       user[lname]) and phone number (user[number])", status: :bad_request
-  #   end
-  #   unless confirm_code(params[:user][:number], params[:code])
-  #     return render json: {"confirmation" => "rejected"}, status: :ok
-  #   end
-  #
-  #   # See if User exists already
-  #   user = User.where(number: params[:number]).first
-  #   unless user
-  #     # Create new User
-  #     user = User.new
-  #     user.fname = params[:user][:fname].strip
-  #     user.lname = params[:user][:lname].strip
-  #     user.number = params[:user][:number]
-  #     user.generate_token!
-  #     user.save!
-  #   end
-  #   unless user.token
-  #     # Generate access token for User
-  #     user.generate_token!
-  #     user.save!
-  #   end
-  #
-  #   # Send User model with token
-  #   return render json: user.with_token, status: :ok
-  # end
 
   def twilio_callback
     # sender = params[:From]
@@ -148,6 +73,9 @@ class Api::V1::ApiController < ApplicationController
   # Calls requiring access_token
   ##############################################################################
   def test
+  end
+
+  def todo
     # Get Plaid user
     begin
       plaid_user = Plaid.add_user('auth', 'plaid_test', 'plaid_good', 'wells')
@@ -184,12 +112,5 @@ class Api::V1::ApiController < ApplicationController
     end
 
     render json: @authed_user, status: :ok
-  end
-
-  private
-
-  def user_params
-    params.require(:user).permit(:fname, :lname, :password, :number, :dob,
-                                 :email, :invest_percent)
   end
 end
