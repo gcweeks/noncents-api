@@ -1,24 +1,24 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-Bars/Nightlife:
-  name: Bars/Nightlife
+Nightlife:
+  name: "Nightlife"
 Restaurants:
-  name: Restaurants
+  name: "Restaurants"
 Shopping:
-  name: Shopping
-Fast Food:
-  name: Fast Food
-Coffee Shops:
-  name: Coffee Shops
+  name: "Shopping"
+FastFood:
+  name: "FastFood"
+CoffeeShops:
+  name: "CoffeeShops"
 Travel:
-  name: Travel
+  name: "Travel"
 Experiences:
-  name: Experiences
+  name: "Experiences"
 Electronics:
-  name: Electronics
-Personal Care:
-  name: Personal Care
+  name: "Electronics"
+PersonalCare:
+  name: "PersonalCare"
 Movies:
-  name: Movies
-Ride Sharing:
-  name: Ride Sharing
+  name: "Movies"
+RideSharing:
+  name: "RideSharing"

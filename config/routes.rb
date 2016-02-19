@@ -6,8 +6,9 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :users, only: [:create]
-      resources :accounts, except: [:index, :new, :edit]
-      resources :banks, except: [:index, :new, :edit]
+      resources :vices, only: [:index]
+      # resources :accounts, except: [:index, :new, :edit]
+      # resources :banks, except: [:index, :new, :edit]
 
       # Calls that do not requre an access token
       get  '/'               => 'api#request_get'
@@ -25,6 +26,7 @@ Rails.application.routes.draw do
       scope 'users' do
         get  'me' => 'users#get_me'
         put  'me' => 'users#update_me'
+        post 'me/vices' => 'users#set_vices'
       end
     end
   end

@@ -1,4 +1,4 @@
 class UserVice < ActiveRecord::Base
   belongs_to :user
-  belongs_to :vices
+  belongs_to :vice
 end

@@ -28,6 +28,34 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user.errors, status: :unprocessable_entity
   end
 
+  # POST /users/me/vices
+  def set_vices
+    vices = []
+    unless params[:vices]
+      errors = { vices: ['are nil'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:vices].is_a?(Array)
+      errors = { vices: ['are in incorrect format'] }
+      return render json: errors, status: :bad_request
+    end
+    params[:vices].each do |vice_name|
+      if vice_name == 'None'
+        @authed_user.vices.clear
+        return render json: @authed_user, status: :ok
+      end
+      vice = Vice.where(name: vice_name).first
+      unless vice
+        errors = { vices: ['have one or more invalid names'] }
+        return render json: errors, status: :unprocessable_entity
+      end
+      vices.push vice
+    end
+    @authed_user.vices.clear
+    @authed_user.vices << vices
+    render json: @authed_user, status: :ok
+  end
+
   private
 
   def user_params

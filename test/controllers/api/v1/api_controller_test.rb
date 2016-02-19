@@ -51,5 +51,4 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
     res = JSON.parse(@response.body)
     assert_match(/^[0-9]*\.[0-9]*\.[0-9]*$/, res['version'])
   end
-  # @request.headers['Authorization'] = @user.token
 end

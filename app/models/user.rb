@@ -1,4 +1,5 @@
 class User < ActiveRecord::Base
+  include ActiveModel::Serializers::JSON
   has_many :accounts
   has_many :user_vices
   has_many :vices, through: :user_vices
@@ -19,8 +20,11 @@ class User < ActiveRecord::Base
   validates :dob, presence: true
   validates :token, presence: true
 
-  def as_json(_options = {})
-    json = super(except: [:token, :password_digest])
+  def as_json(options = {})
+    json = super({
+      except: [:token, :password_digest]
+    }.merge(options))
+    json['vices'] = vices.map(&:name)
     json
   end
 

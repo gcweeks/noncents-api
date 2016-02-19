@@ -123,4 +123,40 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     res = JSON.parse(@response.body)
     assert_equal res['fname'], fname
   end
+
+  test 'should add vices' do
+    @request.headers['Authorization'] = @user.token
+
+    # Nil Vice
+    post :set_vices
+    assert_response :bad_request
+
+    # Bad format
+    vices = 'badformat'
+    post :set_vices, vices: vices
+    assert_response :bad_request
+
+    # Non-existent Vice
+    vices = %w(IDontExist)
+    post :set_vices, vices: vices
+    assert_response :unprocessable_entity
+    vices = %w(Travel IDontExist)
+    post :set_vices, vices: vices
+    assert_response :unprocessable_entity
+    vices = %w(IDontExist Travel)
+    post :set_vices, vices: vices
+    assert_response :unprocessable_entity
+
+    # Correct Vices
+    vices = %w(Travel Nightlife)
+    post :set_vices, vices: vices
+    assert_response :success
+    assert_equal JSON(@response.body)['vices'], vices
+
+    # No Vice
+    vices = %w(None)
+    post :set_vices, vices: vices
+    assert_response :success
+    assert_equal JSON(@response.body)['vices'], []
+  end
 end
