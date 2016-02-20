@@ -1,4 +1,5 @@
 class Api::V1::UsersController < ApplicationController
+  include UserHelper
   before_action :init
   before_action :restrict_access, except: [:create]
 
@@ -54,6 +55,50 @@ class Api::V1::UsersController < ApplicationController
     @authed_user.vices.clear
     @authed_user.vices << vices
     render json: @authed_user, status: :ok
+  end
+
+  # GET users/me/account_auth
+  def account_auth
+    unless params[:username]
+      errors = { username: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:password]
+      errors = { password: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:type]
+      errors = { type: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    # Get Plaid user
+    begin
+      plaid_user = Plaid.add_user('auth',
+                                  params[:username],
+                                  params[:password],
+                                  params[:type])
+    rescue Plaid::PlaidError => e
+      return render json: {
+        'code' => e.code,
+        'message' => e.message,
+        'resolve' => e.resolve
+      }, status: :unauthorized
+    end
+    if plaid_user.api_res == 'success'
+      ret = populate_user_accounts @authed_user, plaid_user
+      # ret will either be a successfully saved User model or an error hash
+      unless ret.is_a? User
+        return render json: ret, status: :internal_server_error
+      end
+      return render json: ret.accounts, status: :ok
+    end
+    # MFA
+    render json: # {
+      # 'api_res' => plaid_user.api_res,
+      # 'access_token' => plaid_user.access_token,
+      # 'mfa' => plaid_user.pending_mfa_questions['mfa']
+      plaid_user, status: :ok
+    # }, status: :ok
   end
 
   private

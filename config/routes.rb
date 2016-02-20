@@ -16,17 +16,24 @@ Rails.application.routes.draw do
       get  'auth'            => 'api#auth'
       post 'confirmation'    => 'api#confirmation'
       get  'check_email'     => 'api#check_email'
-      get  'version/ios'     => 'api#version_ios'
       get  'twilio_callback' => 'api#twilio_callback'
+      scope 'version' do
+        get 'ios' => 'api#version_ios'
+      end
 
       # Calls that require an access token
-      get 'test' => 'api#test' # A test call to verify you are authenticated
+      get 'todo' => 'api#todo'
+      get 'todo2' => 'api#todo2'
 
       # Model-specific calls
       scope 'users' do
-        get  'me' => 'users#get_me'
-        put  'me' => 'users#update_me'
-        post 'me/vices' => 'users#set_vices'
+        scope 'me' do
+          get  '/'               => 'users#get_me'
+          put  '/'               => 'users#update_me'
+          post 'vices'           => 'users#set_vices'
+          get  'account_auth'    => 'users#account_auth'
+          post 'remove_accounts' => 'users#remove_accounts'
+        end
       end
     end
   end

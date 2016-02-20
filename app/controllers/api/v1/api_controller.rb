@@ -72,13 +72,23 @@ class Api::V1::ApiController < ApplicationController
   ##############################################################################
   # Calls requiring access_token
   ##############################################################################
-  def test
-  end
-
   def todo
+    unless params[:username]
+      errors = { username: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:password]
+      errors = { password: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:type]
+      errors = { type: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
     # Get Plaid user
     begin
-      plaid_user = Plaid.add_user('auth', 'plaid_test', 'plaid_good', 'wells')
+      plaid_user = Plaid.add_user('auth', params[:username], params[:password],
+                                  params[:type])
     rescue Plaid::PlaidError => e
       return render json: {
         'code' => e.code,
@@ -86,31 +96,31 @@ class Api::V1::ApiController < ApplicationController
         'resolve' => e.resolve
       }, status: :unauthorized
     end
-
-    @authed_user.accounts = [] unless @authed_user.accounts
-    user_accounts = @authed_user.accounts
-
-    plaid_user.accounts.each do |plaid_account|
-      catch :has_account do
-        user_accounts.each do |user_account|
-          throw :has_account if plaid_account.id == user_account.plaid_id
-        end
-        new_account = @authed_user.accounts.new
-        new_account.plaid_id = plaid_account.id
-        new_account.name = plaid_account.name
-        new_account.account_type = plaid_account.type
-        new_account.account_subtype = plaid_account.subtype
-        new_account.institution = plaid_account.institution_type
-        new_account.routing_num = plaid_account.numbers['routing']
-        new_account.account_num = plaid_account.numbers['account']
-        unless new_account.valid?
-          return render json: new_account.errors.messages, status:
-            :internal_server_error
-        end
-        new_account.save!
-      end
+    begin
+      plaid_user.mfa_authentication('again')
+      plaid_user.mfa_authentication('again')
+      plaid_user.mfa_authentication('again')
+      plaid_user.mfa_authentication('tomato')
+    rescue Plaid::PlaidError => e
+      return render json: {
+        'code' => e.code,
+        'message' => e.message,
+        'resolve' => e.resolve
+      }, status: :unauthorized
     end
+    render json: plaid_user, status: :ok
+  end
 
-    render json: @authed_user, status: :ok
+  def todo2
+    begin
+      plaid_user.mfa_authentication('tomato')
+    rescue Plaid::PlaidError => e
+      return render json: {
+        'code' => e.code,
+        'message' => e.message,
+        'resolve' => e.resolve
+      }, status: :unauthorized
+    end
+    render json: plaid_user, status: :ok
   end
 end
