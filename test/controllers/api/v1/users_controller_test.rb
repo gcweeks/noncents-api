@@ -124,7 +124,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal res['fname'], fname
   end
 
-  test 'should add vices' do
+  test 'should set vices' do
     @request.headers['Authorization'] = @user.token
 
     # Nil Vice
@@ -158,5 +158,20 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     post :set_vices, vices: vices
     assert_response :success
     assert_equal JSON(@response.body)['vices'], []
+  end
+
+  test 'should connect to plaid' do
+    # get :account_connect
+    # get :account_connect, var: var
+  end
+
+  test 'should mfa with plaid' do
+    # get :account_mfa
+    # get :account_mfa, var: var
+  end
+
+  test 'should remove accounts' do
+    # put :remove_accounts
+    # put :remove_accounts, var: var
   end
 end

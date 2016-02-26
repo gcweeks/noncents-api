@@ -37,7 +37,7 @@ class Api::V1::ApiController < ApplicationController
       errors = { password: ['cannot be blank'] }
       return render json: errors, status: :bad_request
     end
-    user = User.where(email: params[:user][:email]).first
+    user = User.find_by(email: params[:user][:email])
     return head :not_found unless user
     user = user.try(:authenticate, params[:user][:password])
     unless user
@@ -54,7 +54,7 @@ class Api::V1::ApiController < ApplicationController
   end
 
   def check_email
-    user = User.where(email: params[:email]).first
+    user = User.find_by(email: params[:email])
     return render json: { 'email' => 'exists' }, status: :ok if user
     render json: { 'email' => 'does not exist' }, status: :ok
   end
@@ -87,8 +87,8 @@ class Api::V1::ApiController < ApplicationController
     end
     # Get Plaid user
     begin
-      plaid_user = Plaid.add_user('auth', params[:username], params[:password],
-                                  params[:type])
+      plaid_user = Plaid.add_user('connect', params[:username],
+                                  params[:password], params[:type])
     rescue Plaid::PlaidError => e
       return render json: {
         'code' => e.code,
@@ -96,18 +96,18 @@ class Api::V1::ApiController < ApplicationController
         'resolve' => e.resolve
       }, status: :unauthorized
     end
-    begin
-      plaid_user.mfa_authentication('again')
-      plaid_user.mfa_authentication('again')
-      plaid_user.mfa_authentication('again')
-      plaid_user.mfa_authentication('tomato')
-    rescue Plaid::PlaidError => e
-      return render json: {
-        'code' => e.code,
-        'message' => e.message,
-        'resolve' => e.resolve
-      }, status: :unauthorized
-    end
+    # begin
+    #   plaid_user.mfa_authentication('again')
+    #   plaid_user.mfa_authentication('again')
+    #   plaid_user.mfa_authentication('again')
+    #   plaid_user.mfa_authentication('tomato')
+    # rescue Plaid::PlaidError => e
+    #   return render json: {
+    #     'code' => e.code,
+    #     'message' => e.message,
+    #     'resolve' => e.resolve
+    #   }, status: :unauthorized
+    # end
     render json: plaid_user, status: :ok
   end
 

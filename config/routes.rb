@@ -30,9 +30,10 @@ Rails.application.routes.draw do
         scope 'me' do
           get  '/'               => 'users#get_me'
           put  '/'               => 'users#update_me'
-          post 'vices'           => 'users#set_vices'
-          get  'account_auth'    => 'users#account_auth'
-          post 'remove_accounts' => 'users#remove_accounts'
+          put  'vices'           => 'users#set_vices'
+          get  'account_connect' => 'users#account_connect'
+          get  'account_mfa'     => 'users#account_mfa'
+          put  'remove_accounts' => 'users#remove_accounts'
         end
       end
     end
