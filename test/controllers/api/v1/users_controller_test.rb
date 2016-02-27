@@ -110,12 +110,20 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should get me' do
+    # Requires auth
+    get :get_me
+    assert_response :unauthorized
+
     @request.headers['Authorization'] = @user.token
     get :get_me
     assert_response :success
   end
 
   test 'should update me' do
+    # Requires auth
+    put :update_me
+    assert_response :unauthorized
+
     @request.headers['Authorization'] = @user.token
     fname = 'Test'
     put :update_me, user: { fname: fname }
@@ -125,6 +133,10 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should set vices' do
+    # Requires auth
+    post :set_vices
+    assert_response :unauthorized
+
     @request.headers['Authorization'] = @user.token
 
     # Nil Vice
@@ -161,17 +173,130 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should connect to plaid' do
-    # get :account_connect
-    # get :account_connect, var: var
+    username = 'plaid_test'
+    password = 'plaid_good'
+    type = 'chase'
+
+    # Requires auth
+    get :account_connect
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Requires username, password, and type
+    get :account_connect
+    assert_response :bad_request
+    get :account_connect, username: username, password: password
+    assert_response :bad_request
+    get :account_connect, type: type, password: password
+    assert_response :bad_request
+    get :account_connect, username: username, type: type
+    assert_response :bad_request
+
+    # MFA
+    @user = User.find_by(id: @user.id)
+    assert_equal @user.accounts.size, 0
+    get :account_connect, username: username, password: password, type: type
+    assert_response :success
+    assert_equal JSON(@response.body)['api_res'],
+                 'Requires further authentication'
+    @user = User.find_by(id: @user.id)
+    assert_equal @user.accounts.size, 0 # Still 0
+
+    # Successfully acquired bank accounts
+    type = 'wells' # No MFA
+    get :account_connect, username: username, password: password, type: type
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
   end
 
   test 'should mfa with plaid' do
-    # get :account_mfa
-    # get :account_mfa, var: var
+    access_token = 'test_chase'
+    type = 'email'
+    mask = 'xxx-xxx-5309'
+    answer = '1234'
+
+    # Requires auth
+    get :account_mfa
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Requires access_token and either answer, mask, or type
+    get :account_mfa
+    assert_response :bad_request
+    get :account_mfa, access_token: access_token
+    assert_response :bad_request
+
+    # Set MFA method
+    get :account_mfa, access_token: access_token, type: type
+    assert_response :success
+    get :account_mfa, access_token: access_token, mask: mask
+    assert_response :success
+
+    # Incorrect MFA answer
+    get :account_mfa, access_token: access_token, answer: 'wrong'
+    assert_response :unauthorized
+
+    # Needs more MFA
+    get :account_mfa, access_token: 'test_usaa', answer: 'again'
+    assert_response :success
+    assert_equal JSON(@response.body)['api_res'],
+                 'Requires further authentication'
+
+    # Correct MFA answer
+    @user = User.find_by(id: @user.id)
+    assert_equal @user.accounts.size, 0 # Still 0
+    get :account_mfa, access_token: access_token, answer: answer
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
   end
 
   test 'should remove accounts' do
-    # put :remove_accounts
-    # put :remove_accounts, var: var
+    # Requires auth
+    put :remove_accounts
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Populate initial accounts
+    get(:account_connect, username: 'plaid_test',
+                          password: 'plaid_good',
+                          type: 'wells') # No MFA
+    @user = User.find_by(id: @user.id)
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    account_ids = @user.accounts.map(&:id)
+
+    # Requires at least one account
+    put :remove_accounts
+    assert_response :bad_request
+
+    # Requires accounts to be in array format
+    put :remove_accounts, accounts: account_ids[0]
+    assert_response :bad_request
+
+    # Remove 1 account
+    put :remove_accounts, accounts: [account_ids[0]]
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_equal account_ids.size - @user.accounts.size, 1
+    new_ids = @user.accounts.map(&:id)
+    assert_not_includes new_ids, account_ids[0]
+    assert_includes new_ids, account_ids[1]
+    assert_includes new_ids, account_ids[2]
+    assert_includes new_ids, account_ids[3]
+
+    # Remove multiple accounts
+    put :remove_accounts, accounts: [account_ids[1], account_ids[2]]
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_equal account_ids.size - @user.accounts.size, 3
+    new_ids = @user.accounts.map(&:id)
+    assert_not_includes new_ids, account_ids[0]
+    assert_not_includes new_ids, account_ids[1]
+    assert_not_includes new_ids, account_ids[2]
+    assert_includes new_ids, account_ids[3]
   end
 end

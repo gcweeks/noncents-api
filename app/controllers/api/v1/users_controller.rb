@@ -78,7 +78,14 @@ class Api::V1::UsersController < ApplicationController
                                     params[:username],
                                     params[:password],
                                     params[:type],
+                                    nil,
                                     list: true)
+                   elsif params[:type] == 'usaa' && params[:pin]
+                     Plaid.add_user('connect',
+                                    params[:username],
+                                    params[:password],
+                                    params[:type],
+                                    params[:pin])
                    else
                      Plaid.add_user('connect',
                                     params[:username],
@@ -114,11 +121,13 @@ class Api::V1::UsersController < ApplicationController
     begin
       plaid_user = Plaid.set_user(params[:access_token], ['connect'])
       if params[:mask]
-        plaid_user.select_mfa_method mask: params[:mask]
+        plaid_user.select_mfa_method(mask: params[:mask])
+        return head :ok
       elsif params[:type]
-        plaid_user.select_mfa_method type: params[:type]
+        plaid_user.select_mfa_method(type: params[:type])
+        return head :ok
       elsif params[:answer]
-        plaid_user.mfa_authentication params[:answer]
+        plaid_user.mfa_authentication(params[:answer])
       else
         errors = {
           answer: ['is required (unless selecting MFA method)'],
