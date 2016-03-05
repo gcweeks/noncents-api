@@ -34,6 +34,7 @@ Rails.application.routes.draw do
           get  'account_connect' => 'users#account_connect'
           get  'account_mfa'     => 'users#account_mfa'
           put  'remove_accounts' => 'users#remove_accounts'
+          get  'transactions'    => 'users#transactions'
         end
       end
     end

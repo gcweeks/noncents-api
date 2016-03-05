@@ -1,6 +1,7 @@
 class User < ActiveRecord::Base
   include ActiveModel::Serializers::JSON
   has_many :accounts
+  has_many :banks
   has_many :user_vices
   has_many :vices, through: :user_vices
   has_many :user_friends

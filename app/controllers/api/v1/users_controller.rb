@@ -99,6 +99,7 @@ class Api::V1::UsersController < ApplicationController
         'resolve' => e.resolve
       }, status: :unauthorized
     end
+    set_bank params[:type], plaid_user.access_token
     if plaid_user.api_res == 'success'
       ret = populate_user_accounts @authed_user, plaid_user
       # ret will either be a successfully saved User model or an error hash
@@ -143,7 +144,6 @@ class Api::V1::UsersController < ApplicationController
         'resolve' => e.resolve
       }, status: :unauthorized
     end
-
     if plaid_user.api_res == 'success'
       ret = populate_user_accounts @authed_user, plaid_user
       # ret will either be a successfully saved User model or an error hash
@@ -181,6 +181,27 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
+  def transactions
+    transactions = []
+    @authed_user.banks.each do |bank|
+      begin
+        plaid_user = Plaid.set_user(bank.access_token, ['connect'])
+      rescue Plaid::PlaidError => e
+        return render json: {
+          'code' => e.code,
+          'message' => e.message,
+          'resolve' => e.resolve
+        }, status: :unauthorized
+      end
+      plaid_user.transactions.each do |transaction|
+        if @authed_user.accounts.map(&:plaid_id).include? transaction.account
+          transactions.push transaction
+        end
+      end if plaid_user.transactions
+    end
+    render json: transactions, status: :ok
+  end
+
   private
 
   def user_params
@@ -192,5 +213,10 @@ class Api::V1::UsersController < ApplicationController
     # No :email
     params.require(:user).permit(:fname, :lname, :password, :number, :dob,
                                  :invest_percent)
+  end
+
+  def set_bank(type, access_token)
+    bank = @authed_user.banks.new(type: type, access_token: access_token)
+    bank.save!
   end
 end
