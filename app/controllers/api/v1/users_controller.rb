@@ -1,5 +1,6 @@
 class Api::V1::UsersController < ApplicationController
   include UserHelper
+  include ViceParser
   before_action :init
   before_action :restrict_access, except: [:create]
 
@@ -181,9 +182,11 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
-  def transactions
+  def dev_transactions
     transactions = []
+    # Get transactions for each bank
     @authed_user.banks.each do |bank|
+      # Get Plaid model
       begin
         plaid_user = Plaid.set_user(bank.access_token, ['connect'])
       rescue Plaid::PlaidError => e
@@ -193,13 +196,32 @@ class Api::V1::UsersController < ApplicationController
           'resolve' => e.resolve
         }, status: :unauthorized
       end
+      # Push transaction if it is from an account that the user has added and
+      # matches one of the user's vices.
       plaid_user.transactions.each do |transaction|
-        if @authed_user.accounts.map(&:plaid_id).include? transaction.account
-          transactions.push transaction
-        end
+        accounts = @authed_user.accounts.map(&:plaid_id)
+        next unless accounts.include? transaction.account
+        vice = get_vice(transaction.category[0],
+                        transaction.category[1],
+                        transaction.category[2])
+        # TODO: Should this be vice or vice.id?
+        next unless @authed_user.vices.map(&:id).include? vice.id
+        model = Transaction.create_from_plaid(transaction)
+        model.vice = vice.id # TODO: Should this be vice or vice.id?
+        model.save!
+        transactions.push model
       end if plaid_user.transactions
     end
     render json: transactions, status: :ok
+  end
+
+  def dev_deduct
+    @authed_user.transactions.each do |transaction|
+      next if transaction.deducted
+      amount = transaction.amount * @authed_user.invest_percent / 100.0
+      amount = amount.round(2)
+      @authed_user.fund.deposit amount
+    end
   end
 
   private
@@ -213,10 +235,5 @@ class Api::V1::UsersController < ApplicationController
     # No :email
     params.require(:user).permit(:fname, :lname, :password, :number, :dob,
                                  :invest_percent)
-  end
-
-  def set_bank(type, access_token)
-    bank = @authed_user.banks.new(type: type, access_token: access_token)
-    bank.save!
   end
 end

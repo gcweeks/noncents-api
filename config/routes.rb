@@ -28,13 +28,14 @@ Rails.application.routes.draw do
       # Model-specific calls
       scope 'users' do
         scope 'me' do
-          get  '/'               => 'users#get_me'
-          put  '/'               => 'users#update_me'
-          put  'vices'           => 'users#set_vices'
-          get  'account_connect' => 'users#account_connect'
-          get  'account_mfa'     => 'users#account_mfa'
-          put  'remove_accounts' => 'users#remove_accounts'
-          get  'transactions'    => 'users#transactions'
+          get  '/'                => 'users#get_me'
+          put  '/'                => 'users#update_me'
+          put  'vices'            => 'users#set_vices'
+          get  'account_connect'  => 'users#account_connect'
+          get  'account_mfa'      => 'users#account_mfa'
+          put  'remove_accounts'  => 'users#remove_accounts'
+          get  'dev_transactions' => 'users#dev_transactions'
+          get  'dev_deduct'       => 'users#dev_deduct'
         end
       end
     end
