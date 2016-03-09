@@ -183,7 +183,6 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def dev_transactions
-    transactions = []
     # Get transactions for each bank
     @authed_user.banks.each do |bank|
       # Get Plaid model
@@ -198,21 +197,33 @@ class Api::V1::UsersController < ApplicationController
       end
       # Push transaction if it is from an account that the user has added and
       # matches one of the user's vices.
-      plaid_user.transactions.each do |transaction|
-        accounts = @authed_user.accounts.map(&:plaid_id)
-        next unless accounts.include? transaction.account
-        vice = get_vice(transaction.category[0],
-                        transaction.category[1],
-                        transaction.category[2])
-        # TODO: Should this be vice or vice.id?
-        next unless @authed_user.vices.map(&:id).include? vice.id
-        model = Transaction.create_from_plaid(transaction)
-        model.vice = vice.id # TODO: Should this be vice or vice.id?
-        model.save!
-        transactions.push model
+      plaid_user.transactions.each do |plaid_transaction|
+        # Skip transactions without categories, because it means we can't
+        # associate it with a Vice anyway.
+        next unless plaid_transaction.category
+        # Skip transactions that the user already has
+        transaction_ids = @authed_user.transactions.map(&:plaid_id)
+        next if transaction_ids.include? plaid_transaction.id
+        # Skip transactions for accounts that the user has not told us to track
+        account_ids = @authed_user.accounts.map(&:plaid_id)
+        next unless account_ids.include? plaid_transaction.account
+        # Get Vice model via category, subcategory, and sub-subcategory
+        vice = get_vice(plaid_transaction.category[0],
+                        plaid_transaction.category[1],
+                        plaid_transaction.category[2])
+        # Skip all transactions that aren't classified as a particular vice
+        next if vice.nil?
+        next unless @authed_user.vices.include? vice
+        # Create Transaction
+        transaction = Transaction.create_from_plaid(plaid_transaction)
+        account = Account.find_by(plaid_id: plaid_transaction.account)
+        transaction.account = account
+        transaction.vice = vice
+        transaction.save!
+        @authed_user.transactions << transaction
       end if plaid_user.transactions
     end
-    render json: transactions, status: :ok
+    render json: @authed_user, status: :ok
   end
 
   def dev_deduct

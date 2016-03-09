@@ -16,9 +16,9 @@ user.save!
 p user.token
 
 vices = []
-vice = Vice.find_by(name: "Nightlife")
+vice = Vice.find_by(name: "CoffeeShops")
 vices.push vice
-vice = Vice.find_by(name: "Travel")
+vice = Vice.find_by(name: "Electronics")
 vices.push vice
 user.vices << vices
 

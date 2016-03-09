@@ -4,6 +4,7 @@ class User < ActiveRecord::Base
   has_many :banks
   has_many :user_vices
   has_many :vices, through: :user_vices
+  has_many :transactions
   has_many :user_friends
   has_many :friends, through: :user_friends
   BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
@@ -23,7 +24,7 @@ class User < ActiveRecord::Base
 
   def as_json(options = {})
     json = super({
-      include: [:accounts],
+      include: [:accounts, :transactions],
       except: [:token, :password_digest]
     }.merge(options))
     json['vices'] = vices.map(&:name)

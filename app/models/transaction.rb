@@ -1,5 +1,24 @@
 class Transaction < ActiveRecord::Base
   belongs_to :account
+  belongs_to :user
+  has_one :vice
+
+  # Validations
+  validates :plaid_id, presence: true, uniqueness: true
+  validates :date, presence: true
+  validates :amount, presence: true
+  validates :name, presence: true
+  validates :category_id, presence: true
+  validates :account_id, presence: true
+  validates :vice, presence: true
+
+  def as_json(options = {})
+    json = super({
+      include: [:vice, :account]
+    }.merge(options))
+    json['vice'] = vice.name
+    json
+  end
 
   # Turn a Plaid transaction into a Transaction model
   def self.create_from_plaid(plaid_transaction)
@@ -10,5 +29,6 @@ class Transaction < ActiveRecord::Base
     transaction.name = plaid_transaction.name
     transaction.category_id = plaid_transaction.category_id
     transaction.account_id = plaid_transaction.account
+    transaction
   end
 end
