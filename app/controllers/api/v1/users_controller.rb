@@ -8,7 +8,11 @@ class Api::V1::UsersController < ApplicationController
   def create
     # Create new User
     user = User.new(user_params)
-    user.generate_token!
+    # Generate the User's auth token
+    user.generate_token
+    # Create the User's fund
+    user.create_fund
+    # Save and check for validation errors
     if user.save
       # Send User model with token
       return render json: user.with_token, status: :ok
@@ -182,7 +186,7 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
-  def dev_transactions
+  def refresh_transactions
     # Get transactions for each bank
     @authed_user.banks.each do |bank|
       # Get Plaid model
@@ -230,19 +234,19 @@ class Api::V1::UsersController < ApplicationController
 
   def dev_deduct
     @authed_user.transactions.each do |transaction|
-      next if transaction.invested
+      next if transaction.invested || transaction.backed_out
       amount = transaction.amount * @authed_user.invest_percent / 100.0
       amount = amount.round(2)
-      # Confusing here, but in this context, 'transaction' refers to the fact
-      # that an atomic database operation is taking place, not to the actual
-      # Transaction model.
-      # TODO:
-      # Fund.transaction do
-      #   @authed_user.fund.deposit!(amount)
-      #   transaction.invested = true
-      #   transaction.save!
-      # end
+      # Confusing here, but in this context, 'Fund.transaction' refers to the
+      # fact that an all-or-nothing database operation is taking place, not to
+      # the actual Transaction model.
+      Fund.transaction do
+        @authed_user.fund.deposit!(amount)
+        transaction.invested = true
+        transaction.save!
+      end
     end
+    render json: @authed_user, status: :ok
   end
 
   private

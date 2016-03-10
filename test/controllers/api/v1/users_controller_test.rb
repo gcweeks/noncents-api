@@ -4,7 +4,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
   setup do
     @user = users(:cashmoney)
     @user.password = 'cashmoney'
-    @user.generate_token!
+    @user.generate_token
     @user.save!
   end
 

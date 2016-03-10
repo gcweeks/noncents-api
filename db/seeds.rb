@@ -11,8 +11,10 @@ end
 user = User.new(fname: 'Cash', lname: 'Money', dob: '1990-01-20',
                 number: '+15555552016', invest_percent: 10,
                 password: 'Ca5hM0n3y', email: 'cashmoney@gmail.com')
-user.generate_token!
+user.create_fund!
+user.generate_token
 user.save!
+# Log user token for quicker testing
 p user.token
 
 vices = []

@@ -46,8 +46,9 @@ class Api::V1::ApiController < ApplicationController
     end
     if user.token.blank?
       # Generate access token for User
-      user.generate_token!
-      user.save!
+      user.generate_token
+      # Save and check for validation errors
+      render json: user.errors, status: :unprocessable_entity unless user.save
     end
     # Send User model with token
     render json: user.with_token, status: :ok
@@ -62,7 +63,6 @@ class Api::V1::ApiController < ApplicationController
   def twilio_callback
     # sender = params[:From]
     # body = params[:Body]
-    # return render text: ""
   end
 
   def version_ios

@@ -21,21 +21,23 @@ Rails.application.routes.draw do
         get 'ios' => 'api#version_ios'
       end
 
-      # Calls that require an access token
-      get 'todo' => 'api#todo'
-      get 'todo2' => 'api#todo2'
-
       # Model-specific calls
       scope 'users' do
         scope 'me' do
-          get  '/'                => 'users#get_me'
-          put  '/'                => 'users#update_me'
-          put  'vices'            => 'users#set_vices'
-          get  'account_connect'  => 'users#account_connect'
-          get  'account_mfa'      => 'users#account_mfa'
-          put  'remove_accounts'  => 'users#remove_accounts'
-          get  'dev_transactions' => 'users#dev_transactions'
-          get  'dev_deduct'       => 'users#dev_deduct'
+          get  '/'                    => 'users#get_me'
+          put  '/'                    => 'users#update_me'
+          put  'vices'                => 'users#set_vices'
+          get  'account_connect'      => 'users#account_connect'
+          get  'account_mfa'          => 'users#account_mfa'
+          put  'remove_accounts'      => 'users#remove_accounts'
+          get  'refresh_transactions' => 'users#refresh_transactions' # TODO: Document
+          get  'dev_deduct'           => 'users#dev_deduct' # TODO: Document
+        end
+      end
+
+      scope 'transactions' do
+        scope ':id' do
+          post 'back_out' => 'transactions#back_out' # TODO: Document
         end
       end
     end

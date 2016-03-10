@@ -1,7 +1,7 @@
 class Transaction < ActiveRecord::Base
   belongs_to :account
   belongs_to :user
-  has_one :vice
+  belongs_to :vice
 
   # Validations
   validates :plaid_id, presence: true, uniqueness: true
@@ -14,7 +14,8 @@ class Transaction < ActiveRecord::Base
 
   def as_json(options = {})
     json = super({
-      include: [:vice, :account]
+      include: [:vice],
+      except: [:vice_id]
     }.merge(options))
     json['vice'] = vice.name
     json
