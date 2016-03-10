@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160308231040) do
+ActiveRecord::Schema.define(version: 20160310012401) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -47,9 +47,10 @@ ActiveRecord::Schema.define(version: 20160308231040) do
     t.string   "name"
     t.string   "category_id"
     t.integer  "account_id"
-    t.datetime "created_at",  null: false
-    t.datetime "updated_at",  null: false
+    t.datetime "created_at",                  null: false
+    t.datetime "updated_at",                  null: false
     t.integer  "user_id"
+    t.boolean  "invested",    default: false
   end
 
   add_index "transactions", ["account_id"], name: "index_transactions_on_account_id"
@@ -80,6 +81,7 @@ ActiveRecord::Schema.define(version: 20160308231040) do
     t.string   "password_digest"
     t.date     "dob"
     t.integer  "invest_percent",  default: 0
+    t.datetime "sync_date"
   end
 
   create_table "vices", force: :cascade do |t|

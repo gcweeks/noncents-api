@@ -223,15 +223,25 @@ class Api::V1::UsersController < ApplicationController
         @authed_user.transactions << transaction
       end if plaid_user.transactions
     end
+    @authed_user.sync_date = DateTime.current
+    @authed_user.save!
     render json: @authed_user, status: :ok
   end
 
   def dev_deduct
     @authed_user.transactions.each do |transaction|
-      next if transaction.deducted
+      next if transaction.invested
       amount = transaction.amount * @authed_user.invest_percent / 100.0
       amount = amount.round(2)
-      @authed_user.fund.deposit amount
+      # Confusing here, but in this context, 'transaction' refers to the fact
+      # that an atomic database operation is taking place, not to the actual
+      # Transaction model.
+      # TODO:
+      # Fund.transaction do
+      #   @authed_user.fund.deposit!(amount)
+      #   transaction.invested = true
+      #   transaction.save!
+      # end
     end
   end
 
