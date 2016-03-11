@@ -3,14 +3,14 @@ require 'test_helper'
 class UserTest < ActiveSupport::TestCase
   test 'validations' do
     user = users(:cashmoney)
-    user.generate_token
-    new_user = User.new(fname: user.fname, lname: user.lname, dob: user.dob,
-                        email: 'valid@email.com', password: 'password')
 
     # Token
     assert_not user.save, 'Saved User without token'
-    new_user.generate_token
-    assert new_user.save, 'Couldn\'t save valid User'
+    user.generate_token
+
+    # Fund
+    assert_not user.save, 'Saved User without fund'
+    user.create_fund
 
     # Password
     assert_not user.save, 'Saved User without password'
@@ -30,7 +30,9 @@ class UserTest < ActiveSupport::TestCase
     user.email = 'cashmoney@gmail.'
     assert_not user.save, 'Saved User with improper email format 2'
     user.email = email
-    new_user.email = user.email
+    new_user = User.new(fname: user.fname, lname: user.lname, dob: user.dob,
+                        email: user.email, password: 'password')
+    new_user.generate_token
     assert_not new_user.save, 'Saved new User with duplicate email'
 
     # Name

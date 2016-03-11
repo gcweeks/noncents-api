@@ -1,9 +1,6 @@
-# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
-one:
-  plaid_id: MyString
+test_transaction:
+  plaid_id: 'KdDjmojBERUKx3JkDdO5IaRJdZeZKNuK4bnKJ1'
   date: 2016-01-29
   amount: 9.99
-  name: MyString
-  category_id: MyString
-  account_id:
+  name: 'The Store'
+  category_id: '19013000'

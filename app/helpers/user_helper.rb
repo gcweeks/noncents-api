@@ -26,7 +26,7 @@ module UserHelper
   end
 
   def set_bank(type, access_token)
-    bank = @authed_user.banks.new(type: type, access_token: access_token)
+    bank = @authed_user.banks.new(name: type, access_token: access_token)
     bank.save!
   end
 end

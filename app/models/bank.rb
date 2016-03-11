@@ -3,4 +3,5 @@ class Bank < ActiveRecord::Base
 
   validates :name, presence: true
   validates :access_token, presence: true
+  validates :user, presence: true
 end
