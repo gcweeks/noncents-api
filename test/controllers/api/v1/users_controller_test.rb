@@ -5,6 +5,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @user = users(:cashmoney)
     @user.password = 'cashmoney'
     @user.generate_token
+    @user.create_fund
     @user.save!
   end
 
@@ -265,6 +266,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     get(:account_connect, username: 'plaid_test',
                           password: 'plaid_good',
                           type: 'wells') # No MFA
+    assert_response :success
     @user = User.find_by(id: @user.id)
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
     account_ids = @user.accounts.map(&:id)
@@ -298,5 +300,80 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_not_includes new_ids, account_ids[1]
     assert_not_includes new_ids, account_ids[2]
     assert_includes new_ids, account_ids[3]
+  end
+
+  test 'should refresh transactions' do
+    # Requires auth
+    get :refresh_transactions
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    assert_equal @user.transactions.size, 0
+    get :account_connect, username: 'plaid_test', password: 'plaid_good',
+                          type: 'wells'
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+
+    # Get transactions without vices
+    vices = %w(None)
+    post :set_vices, vices: vices
+    assert_response :success
+    get :refresh_transactions
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_equal @user.transactions.size, 0
+
+    # Get transactions with vice
+    vices = %w(CoffeeShops)
+    post :set_vices, vices: vices
+    assert_response :success
+    get :refresh_transactions
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_operator @user.transactions.size, :>, 0
+  end
+
+  test 'should deduct into funds dev' do
+    # Requires auth
+    post :dev_deduct
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Get transactions (essentially copy-paste from above)
+    assert_equal @user.transactions.size, 0
+    get :account_connect, username: 'plaid_test', password: 'plaid_good',
+                          type: 'wells'
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    vices = %w(CoffeeShops)
+    post :set_vices, vices: vices
+    assert_response :success
+    get :refresh_transactions
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    # Make sure we've got a couple transactions to play with
+    assert_operator @user.transactions.size, :>=, 2
+
+    # Back out of one transaction
+    backed_out_tx = @user.transactions[0]
+    backed_out_tx.backed_out = true
+    backed_out_tx.save!
+
+    # Deduct
+    assert_equal @user.fund.amount_invested, 0
+    post :dev_deduct
+    assert_response :success
+    @user = User.find_by(id: @user.id)
+    @user.transactions.each do |tx|
+      if tx.id == backed_out_tx.id
+        assert_equal tx.invested, false
+      else
+        assert_equal tx.invested, true
+      end
+    end
   end
 end

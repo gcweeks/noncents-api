@@ -5,6 +5,7 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
     @user = users(:cashmoney)
     @user.password = 'cashmoney'
     @user.generate_token
+    @user.create_fund
     @user.save!
   end
 

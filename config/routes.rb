@@ -21,7 +21,7 @@ Rails.application.routes.draw do
         get 'ios' => 'api#version_ios'
       end
 
-      # Model-specific calls
+      # Model-specific calls (other than those created by resources)
       scope 'users' do
         scope 'me' do
           get  '/'                    => 'users#get_me'
@@ -31,13 +31,12 @@ Rails.application.routes.draw do
           get  'account_mfa'          => 'users#account_mfa'
           put  'remove_accounts'      => 'users#remove_accounts'
           get  'refresh_transactions' => 'users#refresh_transactions' # TODO: Document
-          get  'dev_deduct'           => 'users#dev_deduct' # TODO: Document
+          post 'dev_deduct'           => 'users#dev_deduct' # TODO: Document
         end
       end
-
       scope 'transactions' do
         scope ':id' do
-          post 'back_out' => 'transactions#back_out' # TODO: Document
+          post 'back_out' => 'transactions#back_out' # TODO: Document, test
         end
       end
     end
