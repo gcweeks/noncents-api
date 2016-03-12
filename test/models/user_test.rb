@@ -14,11 +14,15 @@ class UserTest < ActiveSupport::TestCase
 
     # Password
     assert_not user.save, 'Saved User without password'
-    password = 'cashmoney'
+    password = 'Ca5hM0n3y'
     user.password = password
     assert user.save, 'Couldn\'t save valid User'
     user.password = 'cash'
     assert_not user.save, 'Saved User with short password'
+    user.password = 'cashmoney1'
+    assert_not user.save, 'Saved User without capital letter in password'
+    user.password = 'Cashmoney'
+    assert_not user.save, 'Saved User without number in password'
     user.password = password
 
     # Email

@@ -28,6 +28,10 @@ class Api::V1::ApiController < ApplicationController
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
 
+    if params[:user].blank?
+      errors = { email: ['cannot be blank'], password: ['cannot be blank'] }
+      return render json: errors, status: :bad_request
+    end
     if params[:user][:email].blank?
       errors = { email: ['cannot be blank'] }
       return render json: errors, status: :bad_request

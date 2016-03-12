@@ -3,7 +3,7 @@ require 'test_helper'
 class Api::V1::UsersControllerTest < ActionController::TestCase
   setup do
     @user = users(:cashmoney)
-    @user.password = 'cashmoney'
+    @user.password = 'Ca5hM0n3y'
     @user.generate_token
     @user.create_fund
     @user.save!
