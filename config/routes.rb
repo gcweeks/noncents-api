@@ -30,13 +30,14 @@ Rails.application.routes.draw do
           get  'account_connect'      => 'users#account_connect'
           get  'account_mfa'          => 'users#account_mfa'
           put  'remove_accounts'      => 'users#remove_accounts'
-          get  'refresh_transactions' => 'users#refresh_transactions' # TODO: Document
-          post 'dev_deduct'           => 'users#dev_deduct' # TODO: Document
+          post 'refresh_transactions' => 'users#refresh_transactions'
+          post 'dev_deduct'           => 'users#dev_deduct'
         end
       end
       scope 'transactions' do
         scope ':id' do
-          post 'back_out' => 'transactions#back_out' # TODO: Document, test
+          post 'back_out' => 'transactions#back_out'
+          post 'invest'   => 'transactions#invest'
         end
       end
     end
