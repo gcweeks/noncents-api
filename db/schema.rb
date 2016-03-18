@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160310235950) do
+ActiveRecord::Schema.define(version: 20160318224918) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -88,13 +88,14 @@ ActiveRecord::Schema.define(version: 20160310235950) do
     t.string   "lname"
     t.string   "number"
     t.string   "token"
-    t.datetime "created_at",                  null: false
-    t.datetime "updated_at",                  null: false
+    t.datetime "created_at",                    null: false
+    t.datetime "updated_at",                    null: false
     t.string   "email"
     t.string   "password_digest"
     t.date     "dob"
     t.integer  "invest_percent",  default: 0
     t.datetime "sync_date"
+    t.integer  "goal",            default: 230
   end
 
   create_table "vices", force: :cascade do |t|

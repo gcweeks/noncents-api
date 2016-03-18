@@ -16,7 +16,8 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.save, 'Saved User without password'
     password = 'Ca5hM0n3y'
     user.password = password
-    assert user.save, 'Couldn\'t save valid User'
+    assert user.save, "Couldn't save valid User"
+    user = User.find_by(id: user.id) # Refresh User
     user.password = 'cash'
     assert_not user.save, 'Saved User with short password'
     user.password = 'cashmoney1'
@@ -56,8 +57,6 @@ class UserTest < ActiveSupport::TestCase
     user.dob = dob
 
     # Invest percent
-    assert_equal user.invest_percent, 0, 'Invest percent not default \
-      initialized to 0'
     percent = user.invest_percent
     user.invest_percent = nil
     assert_not user.save, 'Saved User without invest percent'
@@ -67,10 +66,25 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.save, 'Saved User with invalid invest percent (<0)'
     user.invest_percent = percent
 
+    # Goal
+    user.goal = nil
+    assert_not user.save, 'Saved User without goal'
+    user.goal = 0
+    assert_not user.save, 'Saved User with out-of-range goal'
+    user.goal = -10
+    assert_not user.save, 'Saved User with out-of-range goal'
+    user.goal = 6000
+    assert_not user.save, 'Saved User with out-of-range goal'
+    user.goal = 420
+    assert user.save, "Couldn't save valid User"
+    user = User.find_by(id: user.id) # Refresh User
+
     # Optional number
     number = user.number
     user.number = nil
-    assert user.save, 'Couldn\'t save valid User'
+    assert user.save, "Couldn't save valid User"
     user.number = number
+    user.save!
+    # user = User.find_by(id: user.id) # Refresh User
   end
 end

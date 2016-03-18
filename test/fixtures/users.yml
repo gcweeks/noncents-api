@@ -4,3 +4,5 @@ cashmoney:
   number: '+15555552016'
   email: 'cashmoney@gmail.com'
   dob: <%= Date.today %>
+  invest_percent: 5
+  goal: 100

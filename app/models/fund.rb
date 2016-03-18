@@ -9,6 +9,8 @@ class Fund < ActiveRecord::Base
   def deposit!(amount)
     return unless amount > 0.0
     self.amount_invested += amount
+    # Artificially increase balance until real balance is pulled
+    self.balance += amount
     save!
   end
 end

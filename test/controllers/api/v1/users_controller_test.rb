@@ -101,13 +101,21 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          number: @user.number,
+                          goal: @user.goal
                         }
     assert_response :success
 
     # Check Token
     res = JSON.parse(@response.body)
     assert_equal 24, res['token'].length
+    assert_equal res['fname'], @user.fname
+    assert_equal res['lname'], @user.lname
+    assert_equal res['invest_percent'], @user.invest_percent
+    assert_equal res['dob'], @user.dob.to_s
+    assert_equal res['number'], @user.number
+    assert_equal res['goal'], @user.goal
   end
 
   test 'should get me' do
@@ -127,10 +135,27 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     @request.headers['Authorization'] = @user.token
     fname = 'Test'
-    put :update_me, user: { fname: fname }
+    lname = 'User'
+    number = '+5555555555'
+    dob = '1990-01-01'
+    invest_percent = 15
+    goal = 420
+    put :update_me, user: {
+      fname: fname,
+      lname: lname,
+      number: number,
+      dob: dob,
+      invest_percent: invest_percent,
+      goal: goal
+    }
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal res['fname'], fname
+    assert_equal res['lname'], lname
+    assert_equal res['number'], number
+    assert_equal res['dob'], dob
+    assert_equal res['invest_percent'], invest_percent
+    assert_equal res['goal'], goal
   end
 
   test 'should set vices' do

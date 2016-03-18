@@ -27,7 +27,7 @@ class Api::V1::UsersController < ApplicationController
 
   # PATCH/PUT /users/me
   def update_me
-    if @authed_user.update!(user_update_params)
+    if @authed_user.update(user_update_params)
       logger.info @authed_user.password
       return render json: @authed_user, status: :ok
     end
@@ -253,12 +253,12 @@ class Api::V1::UsersController < ApplicationController
 
   def user_params
     params.require(:user).permit(:fname, :lname, :password, :number, :dob,
-                                 :email, :invest_percent)
+                                 :email, :invest_percent, :goal)
   end
 
   def user_update_params
-    # No :email
-    params.require(:user).permit(:fname, :lname, :password, :number, :dob,
-                                 :invest_percent)
+    # No :email or :dob
+    params.require(:user).permit(:fname, :lname, :password, :number,
+                                 :invest_percent, :goal)
   end
 end

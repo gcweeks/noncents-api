@@ -29,10 +29,11 @@ class User < ActiveRecord::Base
                        on: :update
   validates :fname, presence: true
   validates :lname, presence: true
-  validates :invest_percent, presence: true, inclusion: 0..100
+  validates :invest_percent, inclusion: 0..100
   validates :dob, presence: true
   validates :token, presence: true
   validates :fund, presence: true
+  validates :goal, inclusion: 1..5500
 
   def as_json(options = {})
     json = super({
