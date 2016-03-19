@@ -5,6 +5,7 @@ class User < ActiveRecord::Base
   has_many :user_vices
   has_many :vices, through: :user_vices
   has_many :transactions
+  has_many :agexes
   has_many :user_friends
   has_many :friends, through: :user_friends
   has_one  :fund

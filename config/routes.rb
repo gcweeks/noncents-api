@@ -32,6 +32,7 @@ Rails.application.routes.draw do
           put  'remove_accounts'      => 'users#remove_accounts'
           post 'refresh_transactions' => 'users#refresh_transactions'
           post 'dev_deduct'           => 'users#dev_deduct'
+          post 'dev_aggregate'        => 'users#dev_aggregate'
         end
       end
       scope 'transactions' do

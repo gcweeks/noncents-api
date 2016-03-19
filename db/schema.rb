@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160318224918) do
+ActiveRecord::Schema.define(version: 20160319003545) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -29,6 +29,18 @@ ActiveRecord::Schema.define(version: 20160318224918) do
   end
 
   add_index "accounts", ["user_id"], name: "index_accounts_on_user_id"
+
+  create_table "agexes", force: :cascade do |t|
+    t.integer  "user_id"
+    t.integer  "vice_id"
+    t.decimal  "amount"
+    t.date     "month"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_index "agexes", ["user_id"], name: "index_agexes_on_user_id"
+  add_index "agexes", ["vice_id"], name: "index_agexes_on_vice_id"
 
   create_table "banks", force: :cascade do |t|
     t.datetime "created_at",   null: false

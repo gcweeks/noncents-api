@@ -249,6 +249,19 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
+  def dev_aggregate
+    message = ''
+    current_month = Date.current.beginning_of_month
+    current_month -= 21.months
+    @authed_user.transactions.each do |transaction|
+      month = transaction.date.beginning_of_month
+      if month < current_month
+        message += 'Transaction month was ' + month.to_s + "\n"
+      end
+    end
+    render text: message, status: :ok
+  end
+
   private
 
   def user_params
