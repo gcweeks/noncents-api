@@ -38,10 +38,14 @@ class User < ActiveRecord::Base
 
   def as_json(options = {})
     json = super({
-      include: [:accounts, :agexes, :fund],
+      include: [:fund],
       except: [:token, :password_digest]
     }.merge(options))
-    json['transactions'] = transactions # 'include' wasn't calling as_json
+    # 'include' wasn't calling as_json
+    json['accounts'] = accounts
+    json['transactions'] = transactions
+    json['agexes'] = agexes
+
     json['vices'] = vices.map(&:name)
     json
   end

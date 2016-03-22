@@ -137,14 +137,12 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     fname = 'Test'
     lname = 'User'
     number = '+5555555555'
-    dob = '1990-01-01'
     invest_percent = 15
     goal = 420
     put :update_me, user: {
       fname: fname,
       lname: lname,
       number: number,
-      dob: dob,
       invest_percent: invest_percent,
       goal: goal
     }
@@ -153,7 +151,6 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal res['fname'], fname
     assert_equal res['lname'], lname
     assert_equal res['number'], number
-    assert_equal res['dob'], dob
     assert_equal res['invest_percent'], invest_percent
     assert_equal res['goal'], goal
   end
@@ -220,20 +217,20 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :bad_request
 
     # MFA
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal @user.accounts.size, 0
     get :account_connect, username: username, password: password, type: type
     assert_response :success
     assert_equal JSON(@response.body)['api_res'],
                  'Requires further authentication'
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal @user.accounts.size, 0 # Still 0
 
     # Successfully acquired bank accounts
     type = 'wells' # No MFA
     get :account_connect, username: username, password: password, type: type
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
   end
 
@@ -272,11 +269,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                  'Requires further authentication'
 
     # Correct MFA answer
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal @user.accounts.size, 0 # Still 0
     get :account_mfa, access_token: access_token, answer: answer
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
   end
 
@@ -292,7 +289,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           password: 'plaid_good',
                           type: 'wells') # No MFA
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
     account_ids = @user.accounts.map(&:id)
 
@@ -307,7 +304,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Remove 1 account
     put :remove_accounts, accounts: [account_ids[0]]
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal account_ids.size - @user.accounts.size, 1
     new_ids = @user.accounts.map(&:id)
     assert_not_includes new_ids, account_ids[0]
@@ -318,7 +315,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Remove multiple accounts
     put :remove_accounts, accounts: [account_ids[1], account_ids[2]]
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal account_ids.size - @user.accounts.size, 3
     new_ids = @user.accounts.map(&:id)
     assert_not_includes new_ids, account_ids[0]
@@ -338,7 +335,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     get :account_connect, username: 'plaid_test', password: 'plaid_good',
                           type: 'wells'
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
 
     # Get transactions without vices
@@ -347,7 +344,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :success
     post :refresh_transactions
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_equal @user.transactions.size, 0
 
     # Get transactions with vice
@@ -356,7 +353,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :success
     post :refresh_transactions
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_operator @user.transactions.size, :>, 0
   end
 
@@ -372,14 +369,14 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     get :account_connect, username: 'plaid_test', password: 'plaid_good',
                           type: 'wells'
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
     post :refresh_transactions
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     # Make sure we've got a couple transactions to play with
     assert_operator @user.transactions.size, :>=, 2
 
@@ -392,13 +389,65 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal @user.fund.amount_invested, 0
     post :dev_deduct
     assert_response :success
-    @user = User.find_by(id: @user.id)
+    @user.reload
     @user.transactions.each do |tx|
       if tx.id == backed_out_tx.id
         assert_equal tx.invested, false
+        assert_equal tx.amount_invested, 0
       else
         assert_equal tx.invested, true
+        assert_operator tx.amount_invested, :>, 0
       end
     end
+  end
+
+  test 'should aggregate funds dev' do
+    # Requires auth
+    post :dev_aggregate
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Get transactions (essentially copy-paste from above)
+    assert_equal @user.transactions.size, 0
+    get :account_connect, username: 'plaid_test', password: 'plaid_good',
+                          type: 'wells'
+    assert_response :success
+    @user.reload
+    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    vices = %w(CoffeeShops)
+    post :set_vices, vices: vices
+    assert_response :success
+    post :refresh_transactions
+    assert_response :success
+    @user.reload
+    # Make sure we've got a couple transactions to play with
+    assert_operator @user.transactions.size, :>=, 2
+
+    # Deduct
+    assert_equal @user.fund.amount_invested, 0
+    post :dev_deduct
+    assert_response :success
+    @user.reload
+    last_month = Date.current.beginning_of_month - 1.month
+    amount = 0 # Keep track of total amount invested
+    @user.transactions.each do |tx|
+      assert_equal tx.invested, true
+      amount += tx.amount_invested
+      # Force date to be last month
+      tx.date = last_month
+      tx.save!
+    end
+
+    assert_equal @user.agexes.size, 0
+    post :dev_aggregate
+    assert_response :success
+    @user.reload
+    assert_equal @user.agexes.size, 1
+    agex = @user.agexes.first
+    assert_equal agex.month, last_month
+    assert_equal agex.amount, amount
+    assert_equal agex.vice, vices(:coffeeshops)
+    assert_equal agex.user, @user
   end
 end

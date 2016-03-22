@@ -14,7 +14,6 @@ class Transaction < ActiveRecord::Base
 
   def as_json(options = {})
     json = super({
-      include: [:vice],
       except: [:vice_id]
     }.merge(options))
     json['vice'] = vice.name
