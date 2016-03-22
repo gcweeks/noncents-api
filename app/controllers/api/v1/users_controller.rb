@@ -250,10 +250,10 @@ class Api::V1::UsersController < ApplicationController
 
   def dev_aggregate
     current_month = Date.current.beginning_of_month
-    current_month -= 21.months # Dev
+    # current_month -= 21.months # Dev
     @authed_user.transactions.each do |transaction|
-      month = transaction.date.beginning_of_month # Dev
-      month = current_month - 1.month
+      month = transaction.date.beginning_of_month
+      # month = current_month - 1.month # Dev
       next unless month < current_month
       if transaction.invested
         agexes = @authed_user.agexes.where(month: month)
