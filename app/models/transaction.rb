@@ -32,4 +32,10 @@ class Transaction < ActiveRecord::Base
     transaction.account_id = plaid_transaction.account
     transaction
   end
+
+  def invest!(amount)
+    self.invested = true
+    self.amount_invested += amount
+    save!
+  end
 end

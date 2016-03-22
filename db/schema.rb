@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160319003545) do
+ActiveRecord::Schema.define(version: 20160322002819) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -33,10 +33,10 @@ ActiveRecord::Schema.define(version: 20160319003545) do
   create_table "agexes", force: :cascade do |t|
     t.integer  "user_id"
     t.integer  "vice_id"
-    t.decimal  "amount"
+    t.decimal  "amount",     default: 0.0
     t.date     "month"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at",               null: false
+    t.datetime "updated_at",               null: false
   end
 
   add_index "agexes", ["user_id"], name: "index_agexes_on_user_id"
@@ -69,12 +69,13 @@ ActiveRecord::Schema.define(version: 20160319003545) do
     t.string   "name"
     t.string   "category_id"
     t.integer  "account_id"
-    t.datetime "created_at",                  null: false
-    t.datetime "updated_at",                  null: false
+    t.datetime "created_at",                      null: false
+    t.datetime "updated_at",                      null: false
     t.integer  "user_id"
-    t.boolean  "invested",    default: false
-    t.boolean  "backed_out",  default: false
+    t.boolean  "invested",        default: false
+    t.boolean  "backed_out",      default: false
     t.integer  "vice_id"
+    t.decimal  "amount_invested", default: 0.0
   end
 
   add_index "transactions", ["account_id"], name: "index_transactions_on_account_id"

@@ -242,24 +242,34 @@ class Api::V1::UsersController < ApplicationController
       # the actual Transaction model.
       Fund.transaction do
         @authed_user.fund.deposit!(amount)
-        transaction.invested = true
-        transaction.save!
+        transaction.invest!(amount)
       end
     end
     render json: @authed_user, status: :ok
   end
 
   def dev_aggregate
-    message = ''
     current_month = Date.current.beginning_of_month
-    current_month -= 21.months
+    current_month -= 21.months # Dev
     @authed_user.transactions.each do |transaction|
-      month = transaction.date.beginning_of_month
-      if month < current_month
-        message += 'Transaction month was ' + month.to_s + "\n"
+      month = transaction.date.beginning_of_month # Dev
+      month = current_month - 1.month
+      next unless month < current_month
+      if transaction.invested
+        agexes = @authed_user.agexes.where(month: month)
+        agex = agexes.where(vice_id: transaction.vice.id).first
+        unless agex
+          agex = @authed_user.agexes.new
+          agex.vice = transaction.vice
+          agex.month = month
+        end
+        agex.amount += transaction.amount_invested
+        agex.save!
       end
+      transaction.destroy
+      @authed_user.reload
     end
-    render text: message, status: :ok
+    render json: @authed_user, status: :ok
   end
 
   private

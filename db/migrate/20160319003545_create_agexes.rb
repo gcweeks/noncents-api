@@ -3,7 +3,7 @@ class CreateAgexes < ActiveRecord::Migration
     create_table :agexes do |t|
       t.references :user, index: true, foreign_key: true
       t.references :vice, index: true, foreign_key: true
-      t.decimal :amount
+      t.decimal :amount, default: 0
       t.date :month
 
       t.timestamps null: false
