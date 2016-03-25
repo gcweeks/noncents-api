@@ -1,5 +1,6 @@
 class Api::V1::UsersController < ApplicationController
   include UserHelper
+  include DwollaHelper
   include ViceParser
   before_action :init
   before_action :restrict_access, except: [:create]
