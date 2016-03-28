@@ -17,7 +17,7 @@ class UserTest < ActiveSupport::TestCase
     password = 'Ca5hM0n3y'
     user.password = password
     assert user.save, "Couldn't save valid User"
-    user = User.find_by(id: user.id) # Refresh User
+    user.reload
     user.password = 'cash'
     assert_not user.save, 'Saved User with short password'
     user.password = 'cashmoney1'
@@ -77,7 +77,7 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.save, 'Saved User with out-of-range goal'
     user.goal = 420
     assert user.save, "Couldn't save valid User"
-    user = User.find_by(id: user.id) # Refresh User
+    user.reload
 
     # Optional number
     number = user.number
@@ -85,6 +85,6 @@ class UserTest < ActiveSupport::TestCase
     assert user.save, "Couldn't save valid User"
     user.number = number
     user.save!
-    # user = User.find_by(id: user.id) # Refresh User
+    # user.reload
   end
 end
