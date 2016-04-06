@@ -6,6 +6,8 @@ require 'rails/all'
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+BCrypt::Engine.cost = 11
+
 module DimentionApp
   class Application < Rails::Application
     # Settings in config/environments/* take precedence over those specified
