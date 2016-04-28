@@ -206,6 +206,8 @@ class Api::V1::UsersController < ApplicationController
         # Skip transactions without categories, because it means we can't
         # associate it with a Vice anyway.
         next unless plaid_transaction.category
+        # Skip transactions with negative amounts
+        next unless plaid_transaction.amount > 0.0
         # Skip transactions that the user already has
         transaction_ids = @authed_user.transactions.map(&:plaid_id)
         next if transaction_ids.include? plaid_transaction.id
@@ -220,7 +222,9 @@ class Api::V1::UsersController < ApplicationController
         next if vice.nil?
         next unless @authed_user.vices.include? vice
         # Create Transaction
-        transaction = Transaction.create_from_plaid(plaid_transaction)
+        transaction = Transaction.from_plaid(plaid_transaction)
+        # Skip transactions created more than 2 weeks ago
+        next unless transaction.date > Date.current - 2.weeks
         account = Account.find_by(plaid_id: plaid_transaction.account)
         transaction.account = account
         transaction.vice = vice
