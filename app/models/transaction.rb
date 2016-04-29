@@ -21,7 +21,7 @@ class Transaction < ActiveRecord::Base
   end
 
   # Turn a Plaid transaction into a Transaction model
-  def self.create_from_plaid(plaid_transaction)
+  def self.from_plaid(plaid_transaction)
     transaction = new
     transaction.plaid_id = plaid_transaction.id
     transaction.date = Date.parse plaid_transaction.date

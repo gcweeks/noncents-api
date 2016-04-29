@@ -43,9 +43,9 @@ ActiveRecord::Schema.define(version: 20160322002819) do
   add_index "agexes", ["vice_id"], name: "index_agexes_on_vice_id"
 
   create_table "banks", force: :cascade do |t|
+    t.string   "name"
     t.datetime "created_at",   null: false
     t.datetime "updated_at",   null: false
-    t.string   "name"
     t.integer  "user_id"
     t.string   "access_token"
   end
