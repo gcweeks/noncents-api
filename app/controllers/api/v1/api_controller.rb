@@ -64,8 +64,16 @@ class Api::V1::ApiController < ApplicationController
   end
 
   def twilio_callback
-    # sender = params[:From]
-    # body = params[:Body]
+    logger.info "From:"
+    logger.info params[:From]
+    logger.info "Body:"
+    logger.info params[:Body]
+    head :ok
+  end
+
+  def plaid_callback
+    logger.info params
+    head :ok
   end
 
   def version_ios

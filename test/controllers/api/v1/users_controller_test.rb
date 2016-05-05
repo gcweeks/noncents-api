@@ -326,7 +326,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
   test 'should refresh transactions' do
     # Requires auth
-    post :refresh_transactions
+    post :refresh_transactions # TODO Fake transactions
     assert_response :unauthorized
 
     @request.headers['Authorization'] = @user.token
@@ -342,7 +342,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     vices = %w(None)
     post :set_vices, vices: vices
     assert_response :success
-    post :refresh_transactions
+    post :refresh_transactions # TODO Fake transactions
     assert_response :success
     @user.reload
     assert_equal @user.transactions.size, 0
@@ -351,7 +351,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
-    post :refresh_transactions
+    post :refresh_transactions # TODO Fake transactions
     assert_response :success
     @user.reload
     assert_operator @user.transactions.size, :>, 0
@@ -374,7 +374,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
-    post :refresh_transactions
+    post :refresh_transactions # TODO Fake transactions
     assert_response :success
     @user.reload
     # Make sure we've got a couple transactions to play with
@@ -418,7 +418,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
-    post :refresh_transactions
+    post :refresh_transactions # TODO Fake transactions
     assert_response :success
     @user.reload
     # Make sure we've got a couple transactions to play with

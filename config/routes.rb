@@ -14,9 +14,9 @@ Rails.application.routes.draw do
       get  '/'               => 'api#request_get'
       post '/'               => 'api#request_post'
       get  'auth'            => 'api#auth'
-      post 'confirmation'    => 'api#confirmation'
       get  'check_email'     => 'api#check_email'
       get  'twilio_callback' => 'api#twilio_callback'
+      get  'plaid_callback'  => 'api#plaid_callback'
       scope 'version' do
         get 'ios' => 'api#version_ios'
       end

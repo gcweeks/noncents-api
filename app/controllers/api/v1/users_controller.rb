@@ -85,18 +85,30 @@ class Api::V1::UsersController < ApplicationController
                                     params[:password],
                                     params[:type],
                                     nil,
-                                    list: true)
+                                    { login_only: true,
+                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
+                                      list: true
+                                    })
                    elsif params[:type] == 'usaa' && params[:pin]
                      Plaid.add_user('connect',
                                     params[:username],
                                     params[:password],
                                     params[:type],
-                                    params[:pin])
+                                    params[:pin],
+                                    { login_only: true,
+                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
+                                      list: true
+                                    })
                    else
                      Plaid.add_user('connect',
                                     params[:username],
                                     params[:password],
-                                    params[:type])
+                                    params[:type],
+                                    nil,
+                                    { login_only: true,
+                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
+                                      list: true
+                                    })
                    end
     rescue Plaid::PlaidError => e
       return render json: {
