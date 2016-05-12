@@ -20,11 +20,11 @@ gem 'turbolinks'
 # bundle exec rake doc:rails generates the API under doc/api.
 # gem 'sdoc', '~> 0.4.0', group: :doc
 # Plaid
-gem 'plaid'
+gem 'plaid', github: 'gcweeks/plaid-ruby', ref: 'd0527f4'
 # Twilio
-gem 'twilio-ruby'
+gem 'twilio-ruby', '~> 4.0'
 # Dwolla
-gem 'dwolla_swagger'
+gem 'dwolla_swagger', '~> 1.0'
 
 # Use ActiveModel has_secure_password
 gem 'bcrypt', '3.1.11'
@@ -36,7 +36,7 @@ gem 'bcrypt', '3.1.11'
 # gem 'capistrano-rails', group: :development
 
 # Rate limiting
-gem 'rack-throttle'
+gem 'rack-throttle', '0.4.0'
 
 group :development, :test do
   gem 'byebug'

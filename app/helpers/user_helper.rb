@@ -12,12 +12,16 @@ module UserHelper
       end if user.accounts
       account = user.accounts.new unless account
       account.plaid_id = plaid_account.id
-      account.name = plaid_account.name
-      account.account_type = plaid_account.type
+      account.name = plaid_account.meta['name']
+      account.account_type = plaid_account.type.to_s
       account.account_subtype = plaid_account.subtype
-      account.institution = plaid_account.institution_type
-      account.routing_num = plaid_account.numbers['routing']
-      account.account_num = plaid_account.numbers['account']
+      account.institution = plaid_account.institution.to_s
+      if plaid_account.numbers
+        account.routing_num = plaid_account.numbers[:routing]
+        account.account_num = plaid_account.numbers[:account]
+      else
+        account.account_num = plaid_account.meta['number']
+      end
       return account.errors unless account.valid?
       account.save!
     end if plaid_user.accounts

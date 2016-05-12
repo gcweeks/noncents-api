@@ -80,54 +80,54 @@ class Api::V1::UsersController < ApplicationController
     # Get Plaid user
     begin
       plaid_user = if params[:type] == 'bofa' || params[:type] == 'chase'
-                     Plaid.add_user('connect',
-                                    params[:username],
-                                    params[:password],
-                                    params[:type],
-                                    nil,
-                                    { login_only: true,
-                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
-                                      list: true
-                                    })
+                     Plaid::User.create(:connect,
+                                        params[:type],
+                                        params[:username],
+                                        params[:password],
+                                        options: {
+                                          login_only: true,
+                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback',
+                                          list: true
+                                        })
                    elsif params[:type] == 'usaa' && params[:pin]
-                     Plaid.add_user('connect',
-                                    params[:username],
-                                    params[:password],
-                                    params[:type],
-                                    params[:pin],
-                                    { login_only: true,
-                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
-                                      list: true
-                                    })
+                     Plaid::User.create(:connect,
+                                        params[:type],
+                                        params[:username],
+                                        params[:password],
+                                        pin: params[:pin],
+                                        options: {
+                                          login_only: true,
+                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
+                                        })
                    else
-                     Plaid.add_user('connect',
-                                    params[:username],
-                                    params[:password],
-                                    params[:type],
-                                    nil,
-                                    { login_only: true,
-                                      webhooks: 'https://app.dimention.co/api/v1/plaid_callback',
-                                      list: true
-                                    })
+                     Plaid::User.create(:connect,
+                                        params[:type],
+                                        params[:username],
+                                        params[:password],
+                                        options: {
+                                          login_only: true,
+                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
+                                        })
                    end
     rescue Plaid::PlaidError => e
-      return render json: {
-        'code' => e.code,
-        'message' => e.message,
-        'resolve' => e.resolve
-      }, status: :unauthorized
+      return handle_plaid_error(e)
     end
+
     set_bank params[:type], plaid_user.access_token
-    if plaid_user.api_res == 'success'
-      ret = populate_user_accounts @authed_user, plaid_user
-      # ret will either be a successfully saved User model or an error hash
-      unless ret.is_a? User
-        return render json: ret, status: :internal_server_error
-      end
+
+    if plaid_user.mfa?
+      # MFA
+      ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
       return render json: ret, status: :ok
     end
-    # MFA
-    render json: plaid_user, status: :ok
+
+    ret = populate_user_accounts @authed_user, plaid_user
+    # 'ret' will either be a successfully saved User model or an ActiveRecord
+    # error hash.
+    unless ret.is_a? User
+      return render json: ret, status: :internal_server_error
+    end
+    return render json: ret, status: :ok
   end
 
   # GET users/me/account_mfa
@@ -138,15 +138,16 @@ class Api::V1::UsersController < ApplicationController
     end
 
     begin
-      plaid_user = Plaid.set_user(params[:access_token], ['connect'])
+      plaid_user = Plaid::User.load(:connect, params[:access_token])
       if params[:mask]
-        plaid_user.select_mfa_method(mask: params[:mask])
-        return head :ok
+        plaid_user.mfa_step(send_method: { mask: params[:mask] })
       elsif params[:type]
-        plaid_user.select_mfa_method(type: params[:type])
-        return head :ok
+        plaid_user.mfa_step(send_method: { type: params[:type] })
       elsif params[:answer]
-        plaid_user.mfa_authentication(params[:answer])
+        plaid_user.mfa_step(params[:answer], options: {
+          login_only: true,
+          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
+        })
       else
         errors = {
           answer: ['is required (unless selecting MFA method)'],
@@ -156,22 +157,22 @@ class Api::V1::UsersController < ApplicationController
         return render json: errors, status: :bad_request
       end
     rescue Plaid::PlaidError => e
-      return render json: {
-        'code' => e.code,
-        'message' => e.message,
-        'resolve' => e.resolve
-      }, status: :unauthorized
+      return handle_plaid_error(e)
     end
-    if plaid_user.api_res == 'success'
-      ret = populate_user_accounts @authed_user, plaid_user
-      # ret will either be a successfully saved User model or an error hash
-      unless ret.is_a? User
-        return render json: ret, status: :internal_server_error
-      end
+
+    if plaid_user.mfa?
+      # More MFA
+      ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
       return render json: ret, status: :ok
     end
-    # More MFA
-    render json: plaid_user, status: :ok
+
+    ret = populate_user_accounts @authed_user, plaid_user
+    # 'ret' will either be a successfully saved User model or an ActiveRecord
+    # error hash.
+    unless ret.is_a? User
+      return render json: ret, status: :internal_server_error
+    end
+    return render json: ret, status: :ok
   end
 
   # PUT users/me/remove_accounts
@@ -204,20 +205,17 @@ class Api::V1::UsersController < ApplicationController
     @authed_user.banks.each do |bank|
       # Get Plaid model
       begin
-        plaid_user = Plaid.set_user(bank.access_token, ['connect'])
+        plaid_user = Plaid::User.load(:connect, bank.access_token)
+        transactions = plaid_user.transactions
       rescue Plaid::PlaidError => e
-        return render json: {
-          'code' => e.code,
-          'message' => e.message,
-          'resolve' => e.resolve
-        }, status: :unauthorized
+        handle_plaid_error(e)
       end
       # Push transaction if it is from an account that the user has added and
       # matches one of the user's vices.
-      plaid_user.transactions.each do |plaid_transaction|
+      transactions.each do |plaid_transaction|
         # Skip transactions without categories, because it means we can't
         # associate it with a Vice anyway.
-        next unless plaid_transaction.category
+        next unless plaid_transaction.category_hierarchy
         # Skip transactions with negative amounts
         next unless plaid_transaction.amount > 0.0
         # Skip transactions that the user already has
@@ -225,11 +223,11 @@ class Api::V1::UsersController < ApplicationController
         next if transaction_ids.include? plaid_transaction.id
         # Skip transactions for accounts that the user has not told us to track
         account_ids = @authed_user.accounts.map(&:plaid_id)
-        next unless account_ids.include? plaid_transaction.account
+        next unless account_ids.include? plaid_transaction.account_id
         # Get Vice model via category, subcategory, and sub-subcategory
-        vice = get_vice(plaid_transaction.category[0],
-                        plaid_transaction.category[1],
-                        plaid_transaction.category[2])
+        vice = get_vice(plaid_transaction.category_hierarchy[0],
+                        plaid_transaction.category_hierarchy[1],
+                        plaid_transaction.category_hierarchy[2])
         # Skip all transactions that aren't classified as a particular vice
         next if vice.nil?
         next unless @authed_user.vices.include? vice
@@ -237,7 +235,7 @@ class Api::V1::UsersController < ApplicationController
         transaction = Transaction.from_plaid(plaid_transaction)
         # Skip transactions created more than 2 weeks ago
         next unless transaction.date > Date.current - 2.weeks
-        account = Account.find_by(plaid_id: plaid_transaction.account)
+        account = Account.find_by(plaid_id: plaid_transaction.account_id)
         transaction.account = account
         transaction.vice = vice
         transaction.save!
@@ -300,5 +298,27 @@ class Api::V1::UsersController < ApplicationController
     # No :email or :dob
     params.require(:user).permit(:fname, :lname, :password, :number,
                                  :invest_percent, :goal)
+  end
+
+  def handle_plaid_error(e)
+    status = case e
+    when Plaid::BadRequestError
+      :bad_request
+    when Plaid::UnauthorizedError
+      :unauthorized
+    when Plaid::RequestFailedError
+      :payment_required
+    when Plaid::NotFoundError
+      :not_found
+    when Plaid::ServerError
+      :internal_server_error
+    else
+      :internal_server_error
+    end
+    render json: {
+      'code' => e.code,
+      'message' => e.message,
+      'resolve' => e.resolve
+    }, status: status
   end
 end

@@ -221,8 +221,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal @user.accounts.size, 0
     get :account_connect, username: username, password: password, type: type
     assert_response :success
-    assert_equal JSON(@response.body)['api_res'],
-                 'Requires further authentication'
+    assert_equal JSON(@response.body)['mfa_type'], 'list'
     @user.reload
     assert_equal @user.accounts.size, 0 # Still 0
 
@@ -260,13 +259,12 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     # Incorrect MFA answer
     get :account_mfa, access_token: access_token, answer: 'wrong'
-    assert_response :unauthorized
+    assert_response :payment_required
 
     # Needs more MFA
     get :account_mfa, access_token: 'test_usaa', answer: 'again'
     assert_response :success
-    assert_equal JSON(@response.body)['api_res'],
-                 'Requires further authentication'
+    assert_equal JSON(@response.body)['mfa_type'], 'questions'
 
     # Correct MFA answer
     @user.reload

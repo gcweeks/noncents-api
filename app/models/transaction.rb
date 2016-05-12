@@ -24,11 +24,11 @@ class Transaction < ActiveRecord::Base
   def self.from_plaid(plaid_transaction)
     transaction = new
     transaction.plaid_id = plaid_transaction.id
-    transaction.date = Date.parse plaid_transaction.date
+    transaction.date = plaid_transaction.date
     transaction.amount = plaid_transaction.amount
     transaction.name = plaid_transaction.name
     transaction.category_id = plaid_transaction.category_id
-    transaction.account_id = plaid_transaction.account
+    transaction.account_id = plaid_transaction.account_id
     transaction
   end
 
