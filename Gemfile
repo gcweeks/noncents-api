@@ -20,7 +20,7 @@ gem 'turbolinks'
 # bundle exec rake doc:rails generates the API under doc/api.
 # gem 'sdoc', '~> 0.4.0', group: :doc
 # Plaid
-gem 'plaid', github: 'gcweeks/plaid-ruby', ref: 'd0527f4'
+gem 'plaid', '2.0.0.alpha.2'
 # Twilio
 gem 'twilio-ruby', '~> 4.0'
 # Dwolla
