@@ -247,6 +247,124 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
+  def dev_populate
+    @authed_user.vices.destroy_all
+    @authed_user.banks.destroy_all
+    @authed_user.accounts.destroy_all
+    @authed_user.transactions.destroy_all
+
+    vices = []
+    vice1 = Vice.find_by(name: "CoffeeShops")
+    vices.push vice1
+    vice2 = Vice.find_by(name: "Electronics")
+    vices.push vice2
+    @authed_user.vices << vices
+
+    bank = @authed_user.banks.new(name: 'wells', access_token: 'test_wells')
+    bank.save!
+
+    account1 = @authed_user.accounts.new(
+      plaid_id: 'QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK',
+      name: 'Plaid Savings',
+      institution: 'fake_institution',
+      account_num: 0,
+      routing_num: 0,
+      account_type: 'depository',
+      account_subtype: 'savings')
+    account1.save!
+    account2 = @authed_user.accounts.new(
+      plaid_id: 'nban4wnPKEtnmEpaKzbYFYQvA7D7pnCaeDBMy',
+      name: 'Plaid Checking',
+      institution: 'fake_institution',
+      account_num: 0,
+      routing_num: 0,
+      account_type: 'depository',
+      account_subtype: 'checking')
+    account2.save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'foo',
+      date: DateTime.current,
+      amount: 13.37,
+      name: 'Python Sticker',
+      category_id: '19013000')
+    transaction.account = account1
+    transaction.vice = vice2
+    transaction.save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'bar',
+      date: DateTime.current-2.days,
+      amount: 710.51,
+      name: 'Microsoft Store',
+      category_id: '19013000')
+    transaction.account = account1
+    transaction.vice = vice2
+    transaction.save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'KdDjmojBERUKx3JkDdO5IaRJdZeZKNuK4bnKJ1',
+      date: DateTime.current-4.days,
+      amount: 2307.15,
+      name: 'Apple Store',
+      category_id: '19013000')
+    transaction.account = account1
+    transaction.vice = vice2
+    transaction.backed_out = true
+    transaction.save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'DAE3Yo3wXgskjXV1JqBDIrDBVvjMLDCQ4rMQdR',
+      date: DateTime.current-7.days,
+      amount: 3.19,
+      name: 'Gregorys Coffee',
+      category_id: '13005043')
+    transaction.account = account2
+    transaction.vice = vice1
+    transaction.save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'moPE4dE1yMHJX5pmRzwrcvpQqPdDnZHEKPREYL',
+      date: DateTime.current-8.days,
+      amount: 7.23,
+      name: 'Krankies Coffee',
+      category_id: '13005043')
+    transaction.account = account1
+    transaction.vice = vice1
+    transaction.backed_out = true
+    transaction.save!
+
+    amount = 5.32
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'JmN0JX0q5EcaQJM9ZbOwUYyyp607m4u3PR63Vn',
+      date: DateTime.current-13.days,
+      amount: amount,
+      name: 'Octane Coffee Bar and Lounge',
+      category_id: '13005043')
+    transaction.account = account1
+    transaction.vice = vice1
+    amount = amount * @authed_user.invest_percent / 100.0
+    amount = amount.round(2)
+    # Essentially reset fund
+    @authed_user.fund.amount_invested = amount
+    # Gained a dollar of 'interest'
+    @authed_user.fund.balance = amount + 1.00
+    @authed_user.fund.save!
+    transaction.invest!(amount) # Calls Transaction#save!
+
+    transaction = @authed_user.transactions.new(
+      plaid_id: 'baz',
+      date: DateTime.current-15.days,
+      amount: 6.78,
+      name: 'Moar Coffee',
+      category_id: '13005043')
+    transaction.account = account1
+    transaction.vice = vice1
+    transaction.save!
+
+    render json: @authed_user, status: :ok
+  end
+
   def dev_deduct
     @authed_user.transactions.each do |transaction|
       next if transaction.invested || transaction.backed_out
@@ -281,6 +399,7 @@ class Api::V1::UsersController < ApplicationController
         agex.amount += transaction.amount_invested
         agex.save!
       end
+      # Destroy all old transactions, even if they haven't been invested
       transaction.destroy
       @authed_user.reload
     end

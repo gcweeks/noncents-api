@@ -31,6 +31,7 @@ Rails.application.routes.draw do
           get  'account_mfa'          => 'users#account_mfa'
           put  'remove_accounts'      => 'users#remove_accounts'
           post 'refresh_transactions' => 'users#refresh_transactions'
+          post 'dev_populate'         => 'users#dev_populate'
           post 'dev_deduct'           => 'users#dev_deduct'
           post 'dev_aggregate'        => 'users#dev_aggregate'
         end
