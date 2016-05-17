@@ -4,7 +4,7 @@ class Transaction < ActiveRecord::Base
   belongs_to :vice
 
   # Validations
-  validates :plaid_id, presence: true, uniqueness: true
+  validates :plaid_id, presence: true
   validates :date, presence: true
   validates :amount, presence: true
   validates :name, presence: true

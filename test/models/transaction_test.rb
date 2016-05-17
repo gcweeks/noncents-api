@@ -30,8 +30,6 @@ class TransactionTest < ActiveSupport::TestCase
     transaction.plaid_id = nil
     assert_not transaction.save, 'Saved Transaction without plaid_id'
     transaction.plaid_id = plaid_id
-    new_transaction.plaid_id = plaid_id
-    assert_not new_transaction.save, 'Saved Transaction with duplicate plaid_id'
     new_transaction.plaid_id = 'newid'
 
     # Date
