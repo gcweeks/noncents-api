@@ -201,50 +201,13 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def refresh_transactions
-    # Get transactions for each bank
-    @authed_user.banks.each do |bank|
-      # Get Plaid model
-      begin
-        plaid_user = Plaid::User.load(:connect, bank.access_token)
-        transactions = plaid_user.transactions
-      rescue Plaid::PlaidError => e
-        handle_plaid_error(e)
-      end
-      # Push transaction if it is from an account that the user has added and
-      # matches one of the user's vices.
-      transactions.each do |plaid_transaction|
-        # Skip transactions without categories, because it means we can't
-        # associate it with a Vice anyway.
-        next unless plaid_transaction.category_hierarchy
-        # Skip transactions with negative amounts
-        next unless plaid_transaction.amount > 0.0
-        # Skip transactions that the user already has
-        transaction_ids = @authed_user.transactions.map(&:plaid_id)
-        next if transaction_ids.include? plaid_transaction.id
-        # Skip transactions for accounts that the user has not told us to track
-        account_ids = @authed_user.accounts.map(&:plaid_id)
-        next unless account_ids.include? plaid_transaction.account_id
-        # Get Vice model via category, subcategory, and sub-subcategory
-        vice = get_vice(plaid_transaction.category_hierarchy[0],
-                        plaid_transaction.category_hierarchy[1],
-                        plaid_transaction.category_hierarchy[2])
-        # Skip all transactions that aren't classified as a particular vice
-        next if vice.nil?
-        next unless @authed_user.vices.include? vice
-        # Create Transaction
-        transaction = Transaction.from_plaid(plaid_transaction)
-        # Skip transactions created more than 2 weeks ago
-        next unless transaction.date > Date.current - 2.weeks
-        account = Account.find_by(plaid_id: plaid_transaction.account_id)
-        transaction.account = account
-        transaction.vice = vice
-        transaction.save!
-        @authed_user.transactions << transaction
-      end if plaid_user.transactions
-    end
-    @authed_user.sync_date = DateTime.current
-    @authed_user.save!
-    render json: @authed_user, status: :ok
+    perform_refresh_transactions(true)
+  end
+
+  def dev_refresh_transactions
+    # The method argument lets us take in older transactions for testing
+    # purposes.
+    perform_refresh_transactions(false)
   end
 
   def dev_populate
@@ -407,6 +370,53 @@ class Api::V1::UsersController < ApplicationController
   end
 
   private
+
+  def perform_refresh_transactions(ignore_old)
+    # Get transactions for each bank
+    @authed_user.banks.each do |bank|
+      # Get Plaid model
+      begin
+        plaid_user = Plaid::User.load(:connect, bank.access_token)
+        transactions = plaid_user.transactions
+      rescue Plaid::PlaidError => e
+        handle_plaid_error(e)
+      end
+      # Push transaction if it is from an account that the user has added and
+      # matches one of the user's vices.
+      transactions.each do |plaid_transaction|
+        # Skip transactions without categories, because it means we can't
+        # associate it with a Vice anyway.
+        next unless plaid_transaction.category_hierarchy
+        # Skip transactions with negative amounts
+        next unless plaid_transaction.amount > 0.0
+        # Skip transactions that the user already has
+        transaction_ids = @authed_user.transactions.map(&:plaid_id)
+        next if transaction_ids.include? plaid_transaction.id
+        # Skip transactions for accounts that the user has not told us to track
+        account_ids = @authed_user.accounts.map(&:plaid_id)
+        next unless account_ids.include? plaid_transaction.account_id
+        # Get Vice model via category, subcategory, and sub-subcategory
+        vice = get_vice(plaid_transaction.category_hierarchy[0],
+                        plaid_transaction.category_hierarchy[1],
+                        plaid_transaction.category_hierarchy[2])
+        # Skip all transactions that aren't classified as a particular vice
+        next if vice.nil?
+        next unless @authed_user.vices.include? vice
+        # Create Transaction
+        transaction = Transaction.from_plaid(plaid_transaction)
+        # Skip transactions created more than 2 weeks ago
+        next if ignore_old && transaction.date < Date.current - 2.weeks
+        account = Account.find_by(plaid_id: plaid_transaction.account_id)
+        transaction.account = account
+        transaction.vice = vice
+        transaction.save!
+        @authed_user.transactions << transaction
+      end if plaid_user.transactions
+    end
+    @authed_user.sync_date = DateTime.current
+    @authed_user.save!
+    render json: @authed_user, status: :ok
+  end
 
   def user_params
     params.require(:user).permit(:fname, :lname, :password, :number, :dob,
