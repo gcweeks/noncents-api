@@ -139,15 +139,15 @@ class Api::V1::UsersController < ApplicationController
 
     begin
       plaid_user = Plaid::User.load(:connect, params[:access_token])
-      if params[:mask]
-        plaid_user.mfa_step(send_method: { mask: params[:mask] })
-      elsif params[:type]
-        plaid_user.mfa_step(send_method: { type: params[:type] })
-      elsif params[:answer]
+      if !params[:answer].blank?
         plaid_user.mfa_step(params[:answer], options: {
           login_only: true,
           webhook: 'https://app.dimention.co/api/v1/plaid_callback'
         })
+      elsif !params[:mask].blank?
+        plaid_user.mfa_step(send_method: { mask: params[:mask] })
+      elsif !params[:type].blank?
+        plaid_user.mfa_step(send_method: { type: params[:type] })
       else
         errors = {
           answer: ['is required (unless selecting MFA method)'],
