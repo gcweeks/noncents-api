@@ -389,6 +389,8 @@ class Api::V1::UsersController < ApplicationController
         next unless plaid_transaction.category_hierarchy
         # Skip transactions with negative amounts
         next unless plaid_transaction.amount > 0.0
+        # Skip transactions created more than 2 weeks ago
+        next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
         # Skip transactions that the user already has
         transaction_ids = @authed_user.transactions.map(&:plaid_id)
         next if transaction_ids.include? plaid_transaction.id
@@ -404,8 +406,6 @@ class Api::V1::UsersController < ApplicationController
         next unless @authed_user.vices.include? vice
         # Create Transaction
         transaction = Transaction.from_plaid(plaid_transaction)
-        # Skip transactions created more than 2 weeks ago
-        next if ignore_old && transaction.date < Date.current - 2.weeks
         account = Account.find_by(plaid_id: plaid_transaction.account_id)
         transaction.account = account
         transaction.vice = vice
