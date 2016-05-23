@@ -1,6 +1,4 @@
 Rails.application.routes.draw do
-  resources :users
-  resources :users
   match '/404' => 'errors#error404', via: [:get, :post, :patch, :delete]
 
   namespace :api do
