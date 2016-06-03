@@ -1,0 +1,6 @@
+version: 1
+cron:
+ - name: "test"
+   url: "/api/v1"
+   schedule: "*/1 * * * *"
+
