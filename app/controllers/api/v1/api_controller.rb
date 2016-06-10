@@ -10,6 +10,7 @@ class Api::V1::ApiController < ApplicationController
     :signup,
     :check_email,
     :twilio_callback,
+    :deduct_cron,
     :version_ios
   ]
 
@@ -74,6 +75,32 @@ class Api::V1::ApiController < ApplicationController
   def plaid_callback
     logger.info params
     head :ok
+  end
+
+  def deduct_cron
+    return head :bad_request unless params[:cron]
+    return head :unauthorized unless params[:cron] == ENV['CRON']
+    logger.info DateTime.current.strftime(
+      "Start deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+
+    User.all.each do |user|
+      user.transactions.each do |transaction|
+        next if transaction.invested || transaction.backed_out
+        amount = transaction.amount * user.invest_percent / 100.0
+        amount = amount.round(2)
+        # A bit confusing: in this context, 'Fund.transaction' refers to the
+        # fact that an all-or-nothing database operation ('transaction') is
+        # taking place, not to the identically-named Transaction model.
+        Fund.transaction do
+          user.fund.deposit!(amount)
+          transaction.invest!(amount)
+        end
+      end
+    end
+
+    logger.info DateTime.current.strftime(
+      "Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+    head status: :ok
   end
 
   def version_ios

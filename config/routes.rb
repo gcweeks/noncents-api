@@ -15,6 +15,7 @@ Rails.application.routes.draw do
       get  'check_email'     => 'api#check_email'
       get  'twilio_callback' => 'api#twilio_callback'
       get  'plaid_callback'  => 'api#plaid_callback'
+      post 'deduct_cron'     => 'api#deduct_cron'
       scope 'version' do
         get 'ios' => 'api#version_ios'
       end
