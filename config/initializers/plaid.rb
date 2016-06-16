@@ -1,7 +1,10 @@
 Plaid.config do |p|
-  p.client_id = '5672296b795b36cc730ba6b5'
-  p.secret = 'c0704f2af851cd5996579b70327700'
+  p.client_id = ENV['PLAID_CLIENT_ID']
+  p.secret = ENV['PLAID_SECRET']
   p.env = :tartan  # or :api for production
+  # For testing:
+  p.client_id = '5672296b795b36cc730ba6b5' unless p.client_id
+  p.secret = 'c0704f2af851cd5996579b70327700' unless p.secret
 end
 
 ## Some Plaid notes:
