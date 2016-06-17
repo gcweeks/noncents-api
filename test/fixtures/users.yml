@@ -5,4 +5,4 @@ cashmoney:
   email: 'cashmoney@gmail.com'
   dob: <%= Date.today %>
   invest_percent: 5
-  goal: 100
+  goal: 150

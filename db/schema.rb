@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160322002819) do
+ActiveRecord::Schema.define(version: 20160617220413) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -108,7 +108,7 @@ ActiveRecord::Schema.define(version: 20160322002819) do
     t.date     "dob"
     t.integer  "invest_percent",  default: 0
     t.datetime "sync_date"
-    t.integer  "goal",            default: 230
+    t.integer  "goal",            default: 150
   end
 
   create_table "vices", force: :cascade do |t|
