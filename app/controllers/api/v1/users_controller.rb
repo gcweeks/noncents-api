@@ -308,11 +308,15 @@ class Api::V1::UsersController < ApplicationController
     transaction.vice = vice1
     amount = amount * @authed_user.invest_percent / 100.0
     amount = amount.round(2)
-    # Essentially reset fund
+    # Essentially reset funds
     @authed_user.fund.amount_invested = amount
+    yearly_fund = @authed_user.yearly_fund()
+    yearly_fund.amount_invested = amount
     # Gained a dollar of 'interest'
     @authed_user.fund.balance = amount + 1.00
     @authed_user.fund.save!
+    yearly_fund.balance = amount + 1.00
+    yearly_fund.save!
     transaction.invest!(amount) # Calls Transaction#save!
 
     transaction = @authed_user.transactions.new(
@@ -338,6 +342,7 @@ class Api::V1::UsersController < ApplicationController
       # the actual Transaction model.
       Fund.transaction do
         @authed_user.fund.deposit!(amount)
+        @authed_user.yearly_fund().deposit!(amount)
         transaction.invest!(amount)
       end
     end

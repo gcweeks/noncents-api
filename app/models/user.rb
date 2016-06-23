@@ -9,6 +9,7 @@ class User < ActiveRecord::Base
   has_many :user_friends
   has_many :friends, through: :user_friends
   has_one  :fund
+  has_many :yearly_funds
   has_secure_password
   BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
                     %w(0 O I l)
@@ -65,5 +66,18 @@ class User < ActiveRecord::Base
       BASE58_ALPHABET[idx]
     end.join
     self.token = token
+  end
+
+  # Convenience method for getting the yearly_fund matching the current year
+  # TODO Eventually let User decide their own contribution date, e.g. during
+  # Jan-Mar when they haven't deposited their $5500 max.
+  def yearly_fund
+    year = Date.current.year # e.g. 2016 (Integer)
+    yearly_fund = self.yearly_funds.where(year: year).first
+    return yearly_fund unless yearly_fund.nil?
+    # No yearly_fund model found matching this year, create one
+    yearly_fund = self.yearly_funds.new(year: year)
+    yearly_fund.save!
+    yearly_fund
   end
 end

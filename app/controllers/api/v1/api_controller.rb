@@ -93,6 +93,7 @@ class Api::V1::ApiController < ApplicationController
         # taking place, not to the identically-named Transaction model.
         Fund.transaction do
           user.fund.deposit!(amount)
+          user.yearly_fund().deposit!(amount)
           transaction.invest!(amount)
         end
       end

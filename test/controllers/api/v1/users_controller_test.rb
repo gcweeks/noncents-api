@@ -385,9 +385,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     # Deduct
     assert_equal @user.fund.amount_invested, 0
+    assert_equal @user.yearly_fund().amount_invested, 0
     post :dev_deduct
     assert_response :success
     @user.reload
+    total_invested = 0
     @user.transactions.each do |tx|
       if tx.id == backed_out_tx.id
         assert_equal tx.invested, false
@@ -395,8 +397,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
       else
         assert_equal tx.invested, true
         assert_operator tx.amount_invested, :>, 0
+        total_invested += tx.amount_invested
       end
     end
+    assert_equal @user.fund.amount_invested, total_invested
+    assert_equal @user.yearly_fund().amount_invested, total_invested
   end
 
   test 'should aggregate funds dev' do
@@ -423,12 +428,13 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_operator @user.transactions.size, :>=, 2
 
     # Deduct
-    assert_equal @user.fund.amount_invested, 0
+    assert_equal @user.fund.amount_invested, 0.00
+    assert_equal @user.yearly_fund().amount_invested, 0.00
     post :dev_deduct
     assert_response :success
     @user.reload
     last_month = Date.current.beginning_of_month - 1.month
-    amount = 0 # Keep track of total amount invested
+    amount = 0.00 # Keep track of total amount invested
     @user.transactions.each do |tx|
       assert_equal tx.invested, true
       amount += tx.amount_invested
@@ -436,6 +442,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
       tx.date = last_month
       tx.save!
     end
+    assert_not_equal amount, 0.00
+    assert_equal @user.fund.amount_invested, amount
+    assert_equal @user.yearly_fund().amount_invested, amount
 
     assert_equal @user.agexes.size, 0
     post :dev_aggregate
