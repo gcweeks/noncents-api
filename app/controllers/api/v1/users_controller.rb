@@ -35,6 +35,11 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user.errors, status: :unprocessable_entity
   end
 
+  # GET /users/me/yearly_fund
+  def get_yearly_fund
+    render json: @authed_user.yearly_fund(), status: :ok
+  end
+
   # PUT /users/me/vices
   def set_vices
     vices = []

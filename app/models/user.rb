@@ -44,10 +44,10 @@ class User < ActiveRecord::Base
     }.merge(options))
     # 'include' wasn't calling as_json
     json['accounts'] = accounts
-    json['transactions'] = transactions
     json['agexes'] = agexes
-
+    json['transactions'] = transactions
     json['vices'] = vices.map(&:name)
+    json['yearly_funds'] = yearly_funds
     json
   end
 

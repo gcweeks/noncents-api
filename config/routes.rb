@@ -25,6 +25,7 @@ Rails.application.routes.draw do
         scope 'me' do
           get  '/'                        => 'users#get_me'
           put  '/'                        => 'users#update_me'
+          get  'yearly_fund'              => 'users#get_yearly_fund'
           put  'vices'                    => 'users#set_vices'
           get  'account_connect'          => 'users#account_connect'
           get  'account_mfa'              => 'users#account_mfa'

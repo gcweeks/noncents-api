@@ -155,6 +155,28 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal res['goal'], goal
   end
 
+  test 'should get yearly fund' do
+    # Requires auth
+    get :get_yearly_fund
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # No YearlyFunds have been created at this point
+    assert_equal @user.yearly_funds.count, 0
+
+    # Get YearlyFund
+    get :get_yearly_fund
+    assert_response :ok
+    assert_equal JSON(@response.body)['balance'].to_f, 0.00
+    assert_equal JSON(@response.body)['amount_invested'].to_f, 0.00
+    assert_equal JSON(@response.body)['year'], Date.current.year
+    assert_equal JSON(@response.body)['user_id'], @user.id
+
+    # YearlyFund now created
+    assert_equal @user.yearly_funds.count, 1
+  end
+
   test 'should set vices' do
     # Requires auth
     post :set_vices
