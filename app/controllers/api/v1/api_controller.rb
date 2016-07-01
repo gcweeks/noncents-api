@@ -11,6 +11,7 @@ class Api::V1::ApiController < ApplicationController
     :check_email,
     :twilio_callback,
     :deduct_cron,
+    :test_cron,
     :version_ios
   ]
 
@@ -102,6 +103,14 @@ class Api::V1::ApiController < ApplicationController
     logger.info DateTime.current.strftime(
       "Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
     head status: :ok
+  end
+
+  def test_cron
+    u = User.where(fname: 'Cash').first
+    f = u.fund
+    f.balance += 10.0
+    f.save!
+    render json: f, status: :ok
   end
 
   def version_ios
