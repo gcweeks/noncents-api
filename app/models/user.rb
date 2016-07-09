@@ -68,6 +68,42 @@ class User < ActiveRecord::Base
     self.token = token
   end
 
+  def dwolla_create
+    # TODO: Implement
+    # DwollaHelper.add_customer(self)
+  end
+
+  # Add funding source and destination to Dwolla
+  def dwolla_add_funding_source
+    # TODO: Implement
+    # DwollaHelper.add_funding_source(customer_id)
+  end
+
+  def dwolla_transfer(amount)
+    # TODO: Implement
+    # begin
+    #   ret = DwollaHelper.transfer_money(customer_id, funding_source, amount)
+    # rescue DwollaV2::NotFoundError => e
+    #   p "NOT FOUND"
+    #   p e
+    #   # => #<DwollaV2::NotFoundError status=404 headers={"server"=>"cloudflare-nginx", "date"=>"Mon, 28 Mar 2016 15:35:32 GMT", "content-type"=>"application/vnd.dwolla.v1.hal+json; profile=\"http://nocarrier.co.uk/profiles/vnd.error/\"; charset=UTF-8", "content-length"=>"69", "connection"=>"close", "set-cookie"=>"__cfduid=da1478bfdf3e56275cd8a6a741866ccce1459179332; expires=Tue, 28-Mar-17 15:35:32 GMT; path=/; domain=.dwolla.com; HttpOnly", "access-control-allow-origin"=>"*", "x-request-id"=>"667fca74-b53d-43db-bddd-50426a011881", "cf-ray"=>"28ac270abca64207-MSP"} {"code"=>"NotFound", "message"=>"The requested resource was not found."}>
+    #
+    #   p e.status
+    #   # => 404
+    #
+    #   p e.headers
+    #   # => {"server"=>"cloudflare-nginx", "date"=>"Mon, 28 Mar 2016 15:35:32 GMT", "content-type"=>"application/vnd.dwolla.v1.hal+json; profile=\"http://nocarrier.co.uk/profiles/vnd.error/\"; charset=UTF-8", "content-length"=>"69", "connection"=>"close", "set-cookie"=>"__cfduid=da1478bfdf3e56275cd8a6a741866ccce1459179332; expires=Tue, 28-Mar-17 15:35:32 GMT; path=/; domain=.dwolla.com; HttpOnly", "access-control-allow-origin"=>"*", "x-request-id"=>"667fca74-b53d-43db-bddd-50426a011881", "cf-ray"=>"28ac270abca64207-MSP"}
+    #
+    #   p e.code
+    #   # => "NotFound"
+    #   return head status: :unprocessable_entity
+    # rescue DwollaV2::Error => e
+    #   p "ERROR"
+    #   p e
+    #   return head status: :unprocessable_entity
+    # end
+  end
+
   # Convenience method for getting the yearly_fund matching the current year
   # TODO Eventually let User decide their own contribution date, e.g. during
   # Jan-Mar when they haven't deposited their $5500 max.

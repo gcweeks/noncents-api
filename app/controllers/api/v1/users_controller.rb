@@ -15,6 +15,7 @@ class Api::V1::UsersController < ApplicationController
     user.create_fund
     # Save and check for validation errors
     if user.save
+      user.dwolla_create # TODO: Check for success
       # Send User model with token
       return render json: user.with_token, status: :ok
     end
@@ -202,6 +203,8 @@ class Api::V1::UsersController < ApplicationController
     account_array.each(&:destroy)
     # Refresh User
     @authed_user = User.find_by(id: @authed_user.id)
+    # Add remaining accounts to Dwolla
+    @authed_user.dwolla_add_funding_source
     render json: @authed_user, status: :ok
   end
 

@@ -24,7 +24,7 @@ gem 'plaid', '2.0.0.alpha.2'
 # Twilio
 gem 'twilio-ruby', '~> 4.0'
 # Dwolla
-gem 'dwolla_swagger', '~> 1.0'
+gem 'dwolla_v2', '~> 1.1'
 
 # Use ActiveModel has_secure_password
 gem 'bcrypt', '3.1.11'

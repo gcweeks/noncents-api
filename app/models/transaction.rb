@@ -35,6 +35,7 @@ class Transaction < ActiveRecord::Base
   def invest!(amount)
     self.invested = true
     self.amount_invested += amount
+    self.user.dwolla_transfer(amount)
     save!
   end
 end

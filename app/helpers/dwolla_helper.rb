@@ -1,48 +1,76 @@
 module DwollaHelper
-  require 'dwolla_swagger'
+  require 'dwolla_v2'
 
-  def init_dwolla
-    DwollaSwagger::Swagger.configure do |config|
-      config.access_token = 'GD31dPZjZji6GUM3GkHkuAmHfck0WGlW7o1Ql3oTV6lk8hexy1'
-      config.host = 'api-uat.dwolla.com'
-      config.base_path = '/'
-    end
+  $dwolla = DwollaV2::Client.new(
+    id: 'XIvRyGL2IFvDNc0tGukSoTZ7yW9dCaZm6hwjzxaU2p5QhbWKTC',
+    secret: 'iscddv6GIjS4S3iKpLxFQD5002hkN4GheNGE2GE3JQnbZOOTSX') do |config|
+
+    config.environment = :sandbox
+    # config.environment = :production
   end
 
-  def dwolla_add_customer(user)
-    init_dwolla
-    jenny = DwollaSwagger::CreateCustomer.new
-    jenny.first_name = user.fname
-    jenny.last_name = user.lname
-    jenny.email = user.email
-    begin
-      location = DwollaSwagger::CustomersApi.create(body: jenny)
-    rescue DwollaSwagger::ClientError => _e
-      # p eval(e.message)
-      return { error: 400 }
-    rescue DwollaSwagger::ServerError => _e
-      # p eval(e.message)
-      return { error: 500 }
-    end
-    { location: location }
+  @@account_token = $dwolla.tokens.new(
+    access_token: 'CekeHk4k3ZTcIxyfUpFhncAqGtrz1RVThB92Nmrhja3Ms8XoYg',
+    refresh_token: 'X0ZOfXjHv7wpLfwBc3czViQqhTgHxkWJK7tGjvarhhmZj570cS',
+    account_id: '8626764c-406d-4b40-aedb-4d70db59957a')
+
+  def self.add_customer(user)
+    # jenny = DwollaSwagger::CreateCustomer.new
+    # jenny.first_name = user.fname
+    # jenny.last_name = user.lname
+    # jenny.email = user.email
+    # begin
+    #   location = DwollaSwagger::CustomersApi.create(body: jenny)
+    # rescue DwollaSwagger::ClientError => _e
+    #   # p eval(e.message)
+    #   return { error: 400 }
+    # rescue DwollaSwagger::ServerError => _e
+    #   # p eval(e.message)
+    #   return { error: 500 }
+    # end
+    # { location: location }
   end
 
-  def transfer_money
-    dimention_account = 'AB443D36-3757-44C1-A1B4-29727FB3111C'
-    source = '80275e83-1f9d-4bf7-8816-2ddcd5ffc197'
-    transfer_request = {
-      _links: {
-        destination: {
-          href: 'https://api-uat.dwolla.com/accounts/' + dimention_account
-        },
-        source: {
-          href: 'https://api-uat.dwolla.com/funding-sources/' + source
-        }
-      },
-      amount: { currency: 'USD', value: 225.00 }
+  def self.get_funding_source(id)
+    funding_sources = @@account_token.get('https://api-uat.dwolla.com/customers/' + id + '/funding-sources')
+    # funding_sources._embedded['funding-sources'][0].name # => "Vera Brittain’s Checking"
+    return funding_sources
+  end
+
+  def self.add_funding_source(customer_id)
+    request_body = {
+      routingNumber: '222222226',
+      accountNumber: '123456789',
+      type: 'checking',
+      name: 'Vera Brittain’s Checking'
     }
 
-    xfer = DwollaSwagger::TransfersApi.create(body: transfer_request)
-    xfer # => https://api-uat.dwolla.com/transfers/d76265cd-0951-e511-80da-0aa34a9b2388
+    funding_source = @@account_token.post('https://api-uat.dwolla.com/customers/' + customer_id + '/funding-sources', request_body)
+    # funding_source.headers[:location] # => "https://api-uat.dwolla.com/funding-sources/375c6781-2a17-476c-84f7-db7d2f6ffb31"
+    return funding_source
+  end
+
+  def self.transfer_money(customer_id, funding_source, amount)
+    request_body = {
+      _links: {
+        destination: {
+          href: 'https://api-uat.dwolla.com/customers/' + customer_id
+        },
+        source: {
+          href: 'https://api-uat.dwolla.com/funding-sources/' + funding_source
+        }
+      },
+      amount: {
+        currency: 'USD',
+        value: amount.to_s
+      },
+      metadata: {
+        foo: 'bar',
+        baz: 'boo'
+      }
+    }
+
+    transfer = @@account_token.post "transfers", request_body
+    return transfer.headers[:location] # => "https://api.dwolla.com/transfers/74c9129b-d14a-e511-80da-0aa34a9b2388"
   end
 end
