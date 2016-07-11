@@ -86,7 +86,11 @@ class Api::V1::ApiController < ApplicationController
 
     User.all.each do |user|
       user.transactions.each do |transaction|
-        next if transaction.invested || transaction.backed_out
+        next if transaction.invested
+        if transaction.backed_out
+          transaction.destroy
+          next
+        end
         amount = transaction.amount * user.invest_percent / 100.0
         amount = amount.round(2)
         # A bit confusing: in this context, 'Fund.transaction' refers to the

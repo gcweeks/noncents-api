@@ -342,7 +342,11 @@ class Api::V1::UsersController < ApplicationController
 
   def dev_deduct
     @authed_user.transactions.each do |transaction|
-      next if transaction.invested || transaction.backed_out
+      next if transaction.invested
+      if transaction.backed_out
+        transaction.destroy
+        next
+      end
       amount = transaction.amount * @authed_user.invest_percent / 100.0
       amount = amount.round(2)
       # Confusing here, but in this context, 'Fund.transaction' refers to the
