@@ -114,6 +114,8 @@ class Api::V1::ApiController < ApplicationController
       param: params[:cron],
       cron: ENV['CRON']
     }
+    logger.info f
+    logger.info request.remote_ip
     render json: f, status: :ok
   end
 
