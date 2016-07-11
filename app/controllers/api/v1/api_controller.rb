@@ -110,10 +110,10 @@ class Api::V1::ApiController < ApplicationController
   end
 
   def test_cron
-    u = User.where(fname: 'Cash').first
-    f = u.fund
-    f.balance += 10.0
-    f.save!
+    f = {
+      param: params[:cron],
+      cron: ENV['CRON']
+    }
     render json: f, status: :ok
   end
 
