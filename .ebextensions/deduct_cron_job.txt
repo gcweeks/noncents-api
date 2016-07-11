@@ -1,3 +1,2 @@
 # The newline at the end of this file is necessary for cron to run.
-20 4 * * 1 root curl --data "cron=$CRON" http://localhost/api/v1/deduct_cron > /dev/null
-* * * * * root curl --data "cron=$CRON" http://localhost/api/v1/test_cron > /dev/null
+20 4 * * 1 root curl --data '' http://localhost/api/v1/deduct_cron > /dev/null

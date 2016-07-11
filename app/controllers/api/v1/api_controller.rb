@@ -79,8 +79,7 @@ class Api::V1::ApiController < ApplicationController
   end
 
   def deduct_cron
-    return head :bad_request unless params[:cron]
-    return head :unauthorized unless params[:cron] == ENV['CRON']
+    return head :not_found unless request.remote_ip == '127.0.0.1'
     logger.info DateTime.current.strftime(
       "Start deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
 
@@ -107,16 +106,6 @@ class Api::V1::ApiController < ApplicationController
     logger.info DateTime.current.strftime(
       "Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
     head status: :ok
-  end
-
-  def test_cron
-    f = {
-      param: params[:cron],
-      cron: ENV['CRON']
-    }
-    logger.info f
-    logger.info request.remote_ip
-    render json: f, status: :ok
   end
 
   def version_ios
