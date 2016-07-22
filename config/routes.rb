@@ -27,6 +27,7 @@ Rails.application.routes.draw do
           put  '/'                        => 'users#update_me'
           get  'yearly_fund'              => 'users#get_yearly_fund'
           put  'vices'                    => 'users#set_vices'
+          put  'address'                  => 'users#set_address'
           get  'account_connect'          => 'users#account_connect'
           get  'account_mfa'              => 'users#account_mfa'
           put  'remove_accounts'          => 'users#remove_accounts'

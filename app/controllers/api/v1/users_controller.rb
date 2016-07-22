@@ -30,7 +30,6 @@ class Api::V1::UsersController < ApplicationController
   # PATCH/PUT /users/me
   def update_me
     if @authed_user.update(user_update_params)
-      logger.info @authed_user.password
       return render json: @authed_user, status: :ok
     end
     render json: @authed_user.errors, status: :unprocessable_entity
@@ -67,6 +66,17 @@ class Api::V1::UsersController < ApplicationController
     @authed_user.vices.clear
     @authed_user.vices << vices
     render json: @authed_user, status: :ok
+  end
+
+  def set_address
+    addr = @authed_user.address
+    addr = Address.new unless addr
+    if addr.update(address_params)
+      @authed_user.address = addr
+      @authed_user.save!
+      return render json: @authed_user, status: :ok
+    end
+    render json: addr.errors, status: :unprocessable_entity
   end
 
   # GET users/me/account_connect
@@ -444,6 +454,10 @@ class Api::V1::UsersController < ApplicationController
     # No :email or :dob
     params.require(:user).permit(:fname, :lname, :password, :number,
                                  :invest_percent, :goal)
+  end
+
+  def address_params
+    params.require(:address).permit(:line1, :line2, :city, :state, :zip)
   end
 
   def handle_plaid_error(e)

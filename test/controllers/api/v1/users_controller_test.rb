@@ -6,6 +6,8 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @user.password = 'Ca5hM0n3y'
     @user.generate_token
     @user.create_fund
+    @user.address = addresses(:test_address)
+    @user.address.save!
     @user.save!
   end
 
@@ -107,15 +109,17 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                         }
     assert_response :success
 
-    # Check Token
+    # Check Response
     res = JSON.parse(@response.body)
     assert_equal 24, res['token'].length
     assert_equal res['fname'], @user.fname
     assert_equal res['lname'], @user.lname
-    assert_equal res['invest_percent'], @user.invest_percent
-    assert_equal res['dob'], @user.dob.to_s
     assert_equal res['number'], @user.number
+    assert_equal res['email'], 'new@email.com'
+    assert_equal res['dob'], @user.dob.to_s
+    assert_equal res['invest_percent'], @user.invest_percent
     assert_equal res['goal'], @user.goal
+    assert_not_equal res['fund'], nil
   end
 
   test 'should get me' do
@@ -126,6 +130,22 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
     get :get_me
     assert_response :success
+
+    # Check Response
+    res = JSON.parse(@response.body)
+    assert_equal res['fname'], @user.fname
+    assert_equal res['lname'], @user.lname
+    assert_equal res['number'], @user.number
+    assert_equal res['email'], @user.email
+    assert_equal res['dob'], @user.dob.to_s
+    assert_equal res['invest_percent'], @user.invest_percent
+    assert_equal res['goal'], @user.goal
+    assert_not_equal res['fund'], nil
+    assert_equal res['address']['line1'], @user.address.line1
+    assert_equal res['address']['line2'], @user.address.line2
+    assert_equal res['address']['city'], @user.address.city
+    assert_equal res['address']['state'], @user.address.state
+    assert_equal res['address']['zip'], @user.address.zip
   end
 
   test 'should update me' do
@@ -147,6 +167,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
       goal: goal
     }
     assert_response :success
+
     res = JSON.parse(@response.body)
     assert_equal res['fname'], fname
     assert_equal res['lname'], lname
@@ -168,10 +189,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Get YearlyFund
     get :get_yearly_fund
     assert_response :ok
-    assert_equal JSON(@response.body)['balance'].to_f, 0.00
-    assert_equal JSON(@response.body)['amount_invested'].to_f, 0.00
-    assert_equal JSON(@response.body)['year'], Date.current.year
-    assert_equal JSON(@response.body)['user_id'], @user.id
+    res = JSON.parse(@response.body)
+    assert_equal res['balance'].to_f, 0.00
+    assert_equal res['amount_invested'].to_f, 0.00
+    assert_equal res['year'], Date.current.year
+    assert_equal res['user_id'], @user.id
 
     # YearlyFund now created
     assert_equal @user.yearly_funds.count, 1
@@ -208,13 +230,89 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     vices = %w(Travel Nightlife)
     post :set_vices, vices: vices
     assert_response :success
-    assert_equal JSON(@response.body)['vices'], vices
+    res = JSON.parse(@response.body)
+    assert_equal res['vices'], vices
 
     # No Vice
     vices = %w(None)
     post :set_vices, vices: vices
     assert_response :success
-    assert_equal JSON(@response.body)['vices'], []
+    res = JSON.parse(@response.body)
+    assert_equal res['vices'], []
+  end
+
+  test 'should set address' do
+    # Requires auth
+    post :set_address
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # No line1
+    post :set_address, address: { line1: nil,
+                                  line2: @user.address.line2,
+                                  city: @user.address.city,
+                                  state: @user.address.state,
+                                  zip: @user.address.zip
+                                }
+    assert_response :unprocessable_entity
+
+    # No city
+    post :set_address, address: { line1: @user.address.line1,
+                                  line2: @user.address.line2,
+                                  city: nil,
+                                  state: @user.address.state,
+                                  zip: @user.address.zip
+                                }
+    assert_response :unprocessable_entity
+
+    # No state
+    post :set_address, address: { line1: @user.address.line1,
+                                  line2: @user.address.line2,
+                                  city: @user.address.city,
+                                  state: nil,
+                                  zip: @user.address.zip
+                                }
+    assert_response :unprocessable_entity
+
+    # No zip
+    post :set_address, address: { line1: @user.address.line1,
+                                  line2: @user.address.line2,
+                                  city: @user.address.city,
+                                  state: @user.address.state,
+                                  zip: nil
+                                }
+    assert_response :unprocessable_entity
+
+    # Good request
+    post :set_address, address: { line1: @user.address.line1,
+                                  line2: @user.address.line2,
+                                  city: @user.address.city,
+                                  state: @user.address.state,
+                                  zip: @user.address.zip
+                                }
+    assert_response :ok
+    res = JSON.parse(@response.body)
+    assert_equal res['address']['line1'], @user.address.line1
+    assert_equal res['address']['line2'], @user.address.line2
+    assert_equal res['address']['city'], @user.address.city
+    assert_equal res['address']['state'], @user.address.state
+    assert_equal res['address']['zip'], @user.address.zip
+
+    # Good request (no line2)
+    post :set_address, address: { line1: @user.address.line1,
+                                  line2: nil,
+                                  city: @user.address.city,
+                                  state: @user.address.state,
+                                  zip: @user.address.zip
+                                }
+    assert_response :ok
+    res = JSON.parse(@response.body)
+    assert_equal res['address']['line1'], @user.address.line1
+    assert_equal res['address']['line2'], nil
+    assert_equal res['address']['city'], @user.address.city
+    assert_equal res['address']['state'], @user.address.state
+    assert_equal res['address']['zip'], @user.address.zip
   end
 
   test 'should connect to plaid' do
@@ -243,7 +341,8 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal @user.accounts.size, 0
     get :account_connect, username: username, password: password, type: type
     assert_response :success
-    assert_equal JSON(@response.body)['mfa_type'], 'list'
+    res = JSON.parse(@response.body)
+    assert_equal res['mfa_type'], 'list'
     @user.reload
     assert_equal @user.accounts.size, 0 # Still 0
 
@@ -286,7 +385,8 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Needs more MFA
     get :account_mfa, access_token: 'test_usaa', answer: 'again'
     assert_response :success
-    assert_equal JSON(@response.body)['mfa_type'], 'questions'
+    res = JSON.parse(@response.body)
+    assert_equal res['mfa_type'], 'questions'
 
     # Correct MFA answer
     @user.reload

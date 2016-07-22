@@ -1,0 +1,6 @@
+test_address:
+  line1: '123 Cashmoney Lane'
+  line2: 'Apt 420'
+  city: 'Los Angeles'
+  state: 'CA'
+  zip: '90024'

@@ -1,5 +1,15 @@
 class User < ActiveRecord::Base
   include ActiveModel::Serializers::JSON
+  BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
+  %w(0 O I l)
+  PASSWORD_FORMAT = /\A
+  (?=.{8,})          # Must contain 8 or more characters
+  (?=.*\d)           # Must contain a digit
+  (?=.*[a-z])        # Must contain a lower case character
+  (?=.*[A-Z])        # Must contain an upper case character
+  # (?=.*[[:^alnum:]]) # Must contain a symbol
+  /x
+
   has_many :accounts
   has_many :banks
   has_many :user_vices
@@ -9,17 +19,9 @@ class User < ActiveRecord::Base
   has_many :user_friends
   has_many :friends, through: :user_friends
   has_one  :fund
+  has_one  :address
   has_many :yearly_funds
   has_secure_password
-  BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
-                    %w(0 O I l)
-  PASSWORD_FORMAT = /\A
-    (?=.{8,})          # Must contain 8 or more characters
-    (?=.*\d)           # Must contain a digit
-    (?=.*[a-z])        # Must contain a lower case character
-    (?=.*[A-Z])        # Must contain an upper case character
-    # (?=.*[[:^alnum:]]) # Must contain a symbol
-  /x
 
   # Validations
   validates :email, presence: true, uniqueness: true, format: {
@@ -39,7 +41,7 @@ class User < ActiveRecord::Base
 
   def as_json(options = {})
     json = super({
-      include: [:fund],
+      include: [:fund, :address],
       except: [:token, :password_digest]
     }.merge(options))
     # 'include' wasn't calling as_json

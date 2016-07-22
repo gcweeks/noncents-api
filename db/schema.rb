@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160619004037) do
+ActiveRecord::Schema.define(version: 20160720230148) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -29,6 +29,19 @@ ActiveRecord::Schema.define(version: 20160619004037) do
   end
 
   add_index "accounts", ["user_id"], name: "index_accounts_on_user_id"
+
+  create_table "addresses", force: :cascade do |t|
+    t.string   "line1"
+    t.string   "line2"
+    t.string   "city"
+    t.string   "state"
+    t.string   "zip"
+    t.integer  "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_index "addresses", ["user_id"], name: "index_addresses_on_user_id"
 
   create_table "agexes", force: :cascade do |t|
     t.integer  "user_id"
