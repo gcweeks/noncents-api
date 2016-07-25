@@ -20,7 +20,7 @@ gem 'turbolinks'
 # bundle exec rake doc:rails generates the API under doc/api.
 # gem 'sdoc', '~> 0.4.0', group: :doc
 # Plaid
-gem 'plaid', '2.0.0.alpha.2'
+gem 'plaid', '2.0.0'
 # Twilio
 gem 'twilio-ruby', '~> 4.0'
 # Dwolla
@@ -41,6 +41,7 @@ gem 'rack-throttle', '0.4.0'
 group :development, :test do
   gem 'byebug'
   gem 'sqlite3'
+  gem 'rails-perftest'
 end
 group :development do
   # gem 'web-console', '~> 2.0'
