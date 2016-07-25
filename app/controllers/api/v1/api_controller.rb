@@ -81,12 +81,17 @@ class Api::V1::ApiController < ApplicationController
   def deduct_cron
     return head :not_found unless request.remote_ip == '127.0.0.1'
     logger.info DateTime.current.strftime(
-      "Start deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Start deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
 
     User.all.each do |user|
+      logger.info 'CRON: Starting deduction for ' + user.fname + ' ' + user.lname + ' (' + user.id.to_s + ')'
       user.transactions.each do |transaction|
-        next if transaction.invested
+        if transaction.invested
+          logger.info 'CRON: Skipping invested transaction ' + transaction.id.to_s
+          next
+        end
         if transaction.backed_out
+          logger.info 'CRON: Destroying backed_out transaction'
           transaction.destroy
           next
         end
@@ -100,11 +105,12 @@ class Api::V1::ApiController < ApplicationController
           user.yearly_fund().deposit!(amount)
           transaction.invest!(amount)
         end
+        logger.info 'CRON: Successfully deducted ' + amount.to_s + ' for transaction ' + transaction.id.to_s
       end
     end
 
     logger.info DateTime.current.strftime(
-      "Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
     head status: :ok
   end
 
