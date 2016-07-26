@@ -41,7 +41,6 @@ gem 'rack-throttle', '0.4.0'
 group :development, :test do
   gem 'byebug'
   gem 'sqlite3'
-  gem 'rails-perftest'
 end
 group :development do
   # gem 'web-console', '~> 2.0'
