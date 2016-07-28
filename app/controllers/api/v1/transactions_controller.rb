@@ -3,7 +3,7 @@ class Api::V1::TransactionsController < ApplicationController
   before_action :restrict_access
 
   def back_out
-    tid = params[:id].to_i
+    tid = params[:id]
     unless @authed_user.transactions.map(&:id).include? tid
       return head :not_found
     end
@@ -26,7 +26,7 @@ class Api::V1::TransactionsController < ApplicationController
   end
 
   def invest
-    tid = params[:id].to_i
+    tid = params[:id]
     unless @authed_user.transactions.map(&:id).include? tid
       return head :not_found
     end

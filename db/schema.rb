@@ -11,10 +11,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160720230148) do
+ActiveRecord::Schema.define(version: 20160727205343) do
 
-  create_table "accounts", force: :cascade do |t|
-    t.integer  "user_id"
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+  enable_extension "uuid-ossp"
+
+  create_table "accounts", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.datetime "created_at",                  null: false
     t.datetime "updated_at",                  null: false
     t.string   "plaid_id"
@@ -26,11 +29,10 @@ ActiveRecord::Schema.define(version: 20160720230148) do
     t.integer  "routing_num"
     t.string   "account_type"
     t.string   "account_subtype"
+    t.uuid     "user_id"
   end
 
-  add_index "accounts", ["user_id"], name: "index_accounts_on_user_id"
-
-  create_table "addresses", force: :cascade do |t|
+  create_table "addresses", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.string   "line1"
     t.string   "line2"
     t.string   "city"
@@ -39,77 +41,67 @@ ActiveRecord::Schema.define(version: 20160720230148) do
     t.integer  "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid     "user_uuid"
   end
 
-  add_index "addresses", ["user_id"], name: "index_addresses_on_user_id"
+  add_index "addresses", ["user_id"], name: "index_addresses_on_user_id", using: :btree
 
-  create_table "agexes", force: :cascade do |t|
-    t.integer  "user_id"
-    t.integer  "vice_id"
+  create_table "agexes", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.decimal  "amount",     default: 0.0
     t.date     "month"
     t.datetime "created_at",               null: false
     t.datetime "updated_at",               null: false
+    t.uuid     "user_id"
+    t.uuid     "vice_id"
   end
 
-  add_index "agexes", ["user_id"], name: "index_agexes_on_user_id"
-  add_index "agexes", ["vice_id"], name: "index_agexes_on_vice_id"
-
-  create_table "banks", force: :cascade do |t|
+  create_table "banks", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.string   "name"
     t.datetime "created_at",   null: false
     t.datetime "updated_at",   null: false
-    t.integer  "user_id"
     t.string   "access_token"
+    t.uuid     "user_id"
   end
 
-  add_index "banks", ["user_id"], name: "index_banks_on_user_id"
-
-  create_table "funds", force: :cascade do |t|
+  create_table "funds", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.decimal  "balance",         default: 0.0
-    t.integer  "user_id"
     t.datetime "created_at",                    null: false
     t.datetime "updated_at",                    null: false
     t.decimal  "amount_invested", default: 0.0
+    t.uuid     "user_id"
   end
 
-  add_index "funds", ["user_id"], name: "index_funds_on_user_id"
-
-  create_table "transactions", force: :cascade do |t|
+  create_table "transactions", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.string   "plaid_id"
     t.date     "date"
     t.decimal  "amount"
     t.string   "name"
     t.string   "category_id"
-    t.integer  "account_id"
     t.datetime "created_at",                      null: false
     t.datetime "updated_at",                      null: false
-    t.integer  "user_id"
     t.boolean  "invested",        default: false
     t.boolean  "backed_out",      default: false
-    t.integer  "vice_id"
     t.decimal  "amount_invested", default: 0.0
+    t.uuid     "account_id"
+    t.uuid     "user_id"
+    t.uuid     "vice_id"
   end
 
-  add_index "transactions", ["account_id"], name: "index_transactions_on_account_id"
-  add_index "transactions", ["user_id"], name: "index_transactions_on_user_id"
-  add_index "transactions", ["vice_id"], name: "index_transactions_on_vice_id"
-
-  create_table "user_friends", force: :cascade do |t|
-    t.integer  "user_id"
-    t.integer  "friend_id"
+  create_table "user_friends", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid     "user_id"
+    t.uuid     "friend_id"
   end
 
-  create_table "user_vices", force: :cascade do |t|
-    t.integer  "user_id"
-    t.integer  "vice_id"
+  create_table "user_vices", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid     "user_id"
+    t.uuid     "vice_id"
   end
 
-  create_table "users", force: :cascade do |t|
+  create_table "users", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.string   "fname"
     t.string   "lname"
     t.string   "number"
@@ -124,21 +116,19 @@ ActiveRecord::Schema.define(version: 20160720230148) do
     t.integer  "goal",            default: 150
   end
 
-  create_table "vices", force: :cascade do |t|
+  create_table "vices", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string   "name"
   end
 
-  create_table "yearly_funds", force: :cascade do |t|
+  create_table "yearly_funds", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.decimal  "balance",         default: 0.0
     t.decimal  "amount_invested", default: 0.0
     t.integer  "year"
-    t.integer  "user_id"
     t.datetime "created_at",                    null: false
     t.datetime "updated_at",                    null: false
+    t.uuid     "user_id"
   end
-
-  add_index "yearly_funds", ["user_id"], name: "index_yearly_funds_on_user_id"
 
 end
