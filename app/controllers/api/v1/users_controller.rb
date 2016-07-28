@@ -1,6 +1,7 @@
 class Api::V1::UsersController < ApplicationController
   include UserHelper
   include DwollaHelper
+  include NotificationHelper
   include ViceParser
   before_action :init
   before_action :restrict_access, except: [:create]
@@ -394,6 +395,11 @@ class Api::V1::UsersController < ApplicationController
       @authed_user.reload
     end
     render json: @authed_user, status: :ok
+  end
+
+  def dev_notify
+    test_notification(@authed_user)
+    render json: { 'notification' => 'sent' }, status: :ok
   end
 
   private

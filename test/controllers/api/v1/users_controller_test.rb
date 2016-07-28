@@ -444,7 +444,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_includes new_ids, account_ids[3]
   end
 
-  test 'should refresh transactions' do
+  test 'should refresh transactions dev' do
     # Requires auth
     post :dev_refresh_transactions # TODO Fake transactions
     assert_response :unauthorized
@@ -475,6 +475,10 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :success
     @user.reload
     assert_operator @user.transactions.size, :>, 0
+  end
+
+  test 'should populate dev' do
+    # Not implemented
   end
 
   test 'should deduct into funds dev' do
@@ -578,5 +582,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal agex.amount, amount
     assert_equal agex.vice, vices(:coffeeshops)
     assert_equal agex.user, @user
+  end
+
+  test 'should notify dev' do
+    # Not implemented
   end
 end
