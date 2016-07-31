@@ -444,6 +444,29 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_includes new_ids, account_ids[3]
   end
 
+  test 'should refresh transactions' do
+    # Not implemented
+  end
+
+  test 'should register push token' do
+    # Requires auth
+    post :register_push_token
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Requires a token
+    post :register_push_token
+    assert_response :bad_request
+
+    # Requires a token
+    post :register_push_token, token: '1234'
+    # No actual registering is done on the test environment
+    assert_response :ok
+    res = JSON.parse(@response.body)
+    assert_equal res['status'], 'registered'
+  end
+
   test 'should refresh transactions dev' do
     # Requires auth
     post :dev_refresh_transactions # TODO Fake transactions

@@ -32,6 +32,7 @@ Rails.application.routes.draw do
           get  'account_mfa'              => 'users#account_mfa'
           put  'remove_accounts'          => 'users#remove_accounts'
           post 'refresh_transactions'     => 'users#refresh_transactions'
+          post 'register_push_token'      => 'users#register_push_token'
           post 'dev_refresh_transactions' => 'users#dev_refresh_transactions'
           post 'dev_populate'             => 'users#dev_populate'
           post 'dev_deduct'               => 'users#dev_deduct'

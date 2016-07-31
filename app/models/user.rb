@@ -42,7 +42,7 @@ class User < ActiveRecord::Base
   def as_json(options = {})
     json = super({
       include: [:fund, :address],
-      except: [:token, :password_digest]
+      except: [:token, :password_digest, :fcm_key]
     }.merge(options))
     # 'include' wasn't calling as_json
     json['accounts'] = accounts

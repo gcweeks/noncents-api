@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160727205343) do
+ActiveRecord::Schema.define(version: 20160731232235) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -114,6 +114,7 @@ ActiveRecord::Schema.define(version: 20160727205343) do
     t.integer  "invest_percent",  default: 0
     t.datetime "sync_date"
     t.integer  "goal",            default: 150
+    t.string   "fcm_key"
   end
 
   create_table "vices", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|

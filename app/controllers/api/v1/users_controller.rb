@@ -223,6 +223,18 @@ class Api::V1::UsersController < ApplicationController
     perform_refresh_transactions(true)
   end
 
+  def register_push_token
+    unless params[:token]
+      errors = { token: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    if register_token_fcm(@authed_user, params[:token])
+      return render json: { 'status' => 'registered' }, status: :ok
+    end
+    render json: { 'status' => 'failed to register' },
+      status: :internal_server_error
+  end
+
   def dev_refresh_transactions
     # The method argument lets us take in older transactions for testing
     # purposes.
