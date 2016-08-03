@@ -46,6 +46,10 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
     assert_equal 'exists', res['email']
   end
 
+  test 'should perform weekly cron' do
+    # Not implemented
+  end
+
   test 'should get version' do
     get :version_ios
     assert_response :success

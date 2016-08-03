@@ -10,7 +10,7 @@ class Api::V1::ApiController < ApplicationController
     :signup,
     :check_email,
     :twilio_callback,
-    :deduct_cron,
+    :weekly_cron,
     :test_cron,
     :version_ios
   ]
@@ -78,39 +78,76 @@ class Api::V1::ApiController < ApplicationController
     head :ok
   end
 
-  def deduct_cron
+  def weekly_cron
     return head :not_found unless request.remote_ip == '127.0.0.1'
     logger.info DateTime.current.strftime(
-      "CRON: Start deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Start weekly_cron at %Y-%m-%d %H:%M:%S::%L %z")
 
     User.all.each do |user|
-      logger.info 'CRON: Starting deduction for ' + user.fname + ' ' + user.lname + ' (' + user.id.to_s + ')'
+      current_month = Date.current.beginning_of_month
+
+      logger.info 'CRON: Starting Transaction processing for ' + user.fname +
+        ' ' + user.lname + ' (' + user.id.to_s + '), current_month: ' +
+        current_month.to_s
+
       user.transactions.each do |transaction|
-        if transaction.invested
-          logger.info 'CRON: Skipping invested transaction ' + transaction.id.to_s
-          next
-        end
+        logger.info 'CRON: Processing Transaction ' + transaction.id.to_s
+
+        # Delete backed_out Transactions
         if transaction.backed_out
-          logger.info 'CRON: Destroying backed_out transaction'
+          logger.info 'CRON: Destroying backed_out Transaction'
           transaction.destroy
           next
         end
-        amount = transaction.amount * user.invest_percent / 100.0
-        amount = amount.round(2)
-        # A bit confusing: in this context, 'Fund.transaction' refers to the
-        # fact that an all-or-nothing database operation ('transaction') is
-        # taking place, not to the identically-named Transaction model.
-        Fund.transaction do
-          user.fund.deposit!(amount)
-          user.yearly_fund().deposit!(amount)
-          transaction.invest!(amount)
+
+        # Deduct Transactions
+        if transaction.invested
+          logger.info 'CRON: Skipping deduct for invested Transaction' +
+            ', already invested ' + transaction.amount_invested.to_s
+        else
+          amount = transaction.amount * user.invest_percent / 100.0
+          amount = amount.round(2)
+          # A bit confusing: in this context, 'Fund.transaction' refers to the
+          # fact that an all-or-nothing database operation ('transaction') is
+          # taking place, not to the identically-named Transaction model.
+          Fund.transaction do
+            user.fund.deposit!(amount)
+            user.yearly_fund().deposit!(amount)
+            transaction.invest!(amount)
+          end
+          logger.info 'CRON: Successfully deducted ' + amount.to_s
         end
-        logger.info 'CRON: Successfully deducted ' + amount.to_s + ' for transaction ' + transaction.id.to_s
+
+        # Don't aggregate/delete if Transaction is still of current month
+        month = transaction.date.beginning_of_month
+        unless month < current_month
+          logger.info 'CRON: Not aggregating Transaction, month: ' + month.to_s
+          next
+        end
+
+        # Aggregate old Transactions
+        logger.info 'CRON: Aggregating Transaction, month: ' + month.to_s
+        agexes = user.agexes.where(month: month)
+        agex = agexes.where(vice_id: transaction.vice.id).first
+        unless agex
+          logger.info 'CRON: Creating new Agex for ' + transaction.vice.name +
+            ' Vice'
+          agex = user.agexes.new
+          agex.vice = transaction.vice
+          agex.month = month
+        end
+        agex.amount += transaction.amount_invested
+        agex.save!
+
+        # Destroy all old transactions
+        transaction.destroy
+        logger.info 'CRON: Successfully aggregated/deleted Transaction into ' +
+         agex.id.to_s + ' Agex'
       end
     end
 
     logger.info DateTime.current.strftime(
-      "CRON: Finished deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Finished weekly_cron at %Y-%m-%d %H:%M:%S::%L %z")
     head status: :ok
   end
 
