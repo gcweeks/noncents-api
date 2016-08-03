@@ -236,16 +236,16 @@ class Api::V1::UsersController < ApplicationController
     @authed_user.transactions.destroy_all
 
     vices = []
-    vice1 = Vice.find_by(name: "CoffeeShops")
-    vices.push vice1
-    vice2 = Vice.find_by(name: "Electronics")
-    vices.push vice2
+    vice_coffeeshops = Vice.find_by(name: "CoffeeShops")
+    vices.push vice_coffeeshops
+    vice_electronics = Vice.find_by(name: "Electronics")
+    vices.push vice_electronics
     @authed_user.vices << vices
 
     bank = @authed_user.banks.new(name: 'wells', access_token: 'test_wells')
     bank.save!
 
-    account1 = @authed_user.accounts.new(
+    account_savings = @authed_user.accounts.new(
       plaid_id: 'QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK',
       name: 'Plaid Savings',
       institution: 'fake_institution',
@@ -253,8 +253,8 @@ class Api::V1::UsersController < ApplicationController
       routing_num: 0,
       account_type: 'depository',
       account_subtype: 'savings')
-    account1.save!
-    account2 = @authed_user.accounts.new(
+    account_savings.save!
+    account_checking = @authed_user.accounts.new(
       plaid_id: 'nban4wnPKEtnmEpaKzbYFYQvA7D7pnCaeDBMy',
       name: 'Plaid Checking',
       institution: 'fake_institution',
@@ -262,7 +262,7 @@ class Api::V1::UsersController < ApplicationController
       routing_num: 0,
       account_type: 'depository',
       account_subtype: 'checking')
-    account2.save!
+    account_checking.save!
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',
@@ -270,8 +270,8 @@ class Api::V1::UsersController < ApplicationController
       amount: 13.37,
       name: 'Python Sticker',
       category_id: '19013000')
-    transaction.account = account1
-    transaction.vice = vice2
+    transaction.account = account_savings
+    transaction.vice = vice_electronics
     transaction.save!
 
     transaction = @authed_user.transactions.new(
@@ -280,8 +280,8 @@ class Api::V1::UsersController < ApplicationController
       amount: 710.51,
       name: 'Microsoft Store',
       category_id: '19013000')
-    transaction.account = account1
-    transaction.vice = vice2
+    transaction.account = account_savings
+    transaction.vice = vice_electronics
     transaction.save!
 
     transaction = @authed_user.transactions.new(
@@ -290,19 +290,19 @@ class Api::V1::UsersController < ApplicationController
       amount: 2307.15,
       name: 'Apple Store',
       category_id: '19013000')
-    transaction.account = account1
-    transaction.vice = vice2
+    transaction.account = account_savings
+    transaction.vice = vice_electronics
     transaction.backed_out = true
     transaction.save!
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'DAE3Yo3wXgskjXV1JqBDIrDBVvjMLDCQ4rMQdR',
       date: DateTime.current-7.days,
-      amount: 3.19,
+      amount: 4.19,
       name: 'Gregorys Coffee',
       category_id: '13005043')
-    transaction.account = account2
-    transaction.vice = vice1
+    transaction.account = account_checking
+    transaction.vice = vice_coffeeshops
     transaction.save!
 
     transaction = @authed_user.transactions.new(
@@ -311,8 +311,8 @@ class Api::V1::UsersController < ApplicationController
       amount: 7.23,
       name: 'Krankies Coffee',
       category_id: '13005043')
-    transaction.account = account1
-    transaction.vice = vice1
+    transaction.account = account_savings
+    transaction.vice = vice_coffeeshops
     transaction.backed_out = true
     transaction.save!
 
@@ -323,8 +323,8 @@ class Api::V1::UsersController < ApplicationController
       amount: amount,
       name: 'Octane Coffee Bar and Lounge',
       category_id: '13005043')
-    transaction.account = account1
-    transaction.vice = vice1
+    transaction.account = account_savings
+    transaction.vice = vice_coffeeshops
     amount = amount * @authed_user.invest_percent / 100.0
     amount = amount.round(2)
     # Essentially reset funds
@@ -342,10 +342,10 @@ class Api::V1::UsersController < ApplicationController
       plaid_id: 'baz',
       date: DateTime.current-15.days,
       amount: 6.78,
-      name: 'Moar Coffee',
+      name: 'Moar Electronics',
       category_id: '13005043')
-    transaction.account = account1
-    transaction.vice = vice1
+    transaction.account = account_savings
+    transaction.vice = vice_electronics
     transaction.save!
 
     render json: @authed_user, status: :ok
@@ -360,9 +360,9 @@ class Api::V1::UsersController < ApplicationController
       end
       amount = transaction.amount * @authed_user.invest_percent / 100.0
       amount = amount.round(2)
-      # Confusing here, but in this context, 'Fund.transaction' refers to the
-      # fact that an all-or-nothing database operation is taking place, not to
-      # the actual Transaction model.
+      # A bit confusing: in this context, 'Fund.transaction' refers to the
+      # fact that an all-or-nothing database operation ('transaction') is
+      # taking place, not to the identically-named Transaction model.
       Fund.transaction do
         @authed_user.fund.deposit!(amount)
         @authed_user.yearly_fund().deposit!(amount)
