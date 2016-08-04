@@ -80,23 +80,30 @@ class Api::V1::ApiController < ApplicationController
 
   def weekly_cron
     return head :not_found unless request.remote_ip == '127.0.0.1'
+
+    current_month = Date.current.beginning_of_month
     logger.info DateTime.current.strftime(
-      "CRON: Start weekly_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Start weekly_cron at %Y-%m-%d %H:%M:%S::%L %z, current_month: " +
+      current_month.to_s)
 
     User.all.each do |user|
-      current_month = Date.current.beginning_of_month
-
       logger.info 'CRON: Starting Transaction processing for ' + user.fname +
-        ' ' + user.lname + ' (' + user.id.to_s + '), current_month: ' +
-        current_month.to_s
+        ' ' + user.lname + ' (' + user.id.to_s + ')'
 
       user.transactions.each do |transaction|
         logger.info 'CRON: Processing Transaction ' + transaction.id.to_s
 
-        # Delete backed_out Transactions
+        if transaction.archived
+          logger.info 'CRON: Skipping archived Transaction'
+          # Re-archive in order to delete the Transaction if it is too old
+          transaction.archive!
+          next
+        end
+
+        # Archive backed_out Transactions
         if transaction.backed_out
-          logger.info 'CRON: Destroying backed_out Transaction'
-          transaction.destroy
+          logger.info 'CRON: Archiving backed_out Transaction'
+          transaction.archive!
           next
         end
 
@@ -139,8 +146,8 @@ class Api::V1::ApiController < ApplicationController
         agex.amount += transaction.amount_invested
         agex.save!
 
-        # Destroy all old transactions
-        transaction.destroy
+        # Archive all old transactions
+        transaction.archive!
         logger.info 'CRON: Successfully aggregated/deleted Transaction into ' +
          agex.id.to_s + ' Agex'
       end

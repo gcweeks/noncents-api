@@ -47,7 +47,7 @@ class User < ActiveRecord::Base
     # 'include' wasn't calling as_json
     json['accounts'] = accounts
     json['agexes'] = agexes
-    json['transactions'] = transactions
+    json['transactions'] = transactions.reject { |t| t.archived }
     json['vices'] = vices.map(&:name)
     json['yearly_funds'] = yearly_funds
     json

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160731232235) do
+ActiveRecord::Schema.define(version: 20160804002658) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -85,6 +85,7 @@ ActiveRecord::Schema.define(version: 20160731232235) do
     t.uuid     "account_id"
     t.uuid     "user_id"
     t.uuid     "vice_id"
+    t.boolean  "archived",        default: false
   end
 
   create_table "user_friends", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|

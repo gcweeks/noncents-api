@@ -5,8 +5,6 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :users, only: [:create]
       resources :vices, only: [:index]
-      # resources :accounts, except: [:index, :new, :edit]
-      # resources :banks, except: [:index, :new, :edit]
 
       # Calls that do not requre an access token
       get  '/'               => 'api#request_get'
@@ -43,7 +41,8 @@ Rails.application.routes.draw do
       scope 'transactions' do
         scope ':id' do
           post 'back_out' => 'transactions#back_out'
-          post 'invest'   => 'transactions#invest'
+          post 'restore'  => 'transactions#restore'
+          post 'invest'   => 'transactions#restore' # TODO Deprecated, remove
         end
       end
     end
