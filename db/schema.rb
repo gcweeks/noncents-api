@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160720230148) do
+ActiveRecord::Schema.define(version: 20160804002658) do
 
   create_table "accounts", force: :cascade do |t|
     t.integer  "user_id"
@@ -89,6 +89,7 @@ ActiveRecord::Schema.define(version: 20160720230148) do
     t.boolean  "backed_out",      default: false
     t.integer  "vice_id"
     t.decimal  "amount_invested", default: 0.0
+    t.boolean  "archived",        default: false
   end
 
   add_index "transactions", ["account_id"], name: "index_transactions_on_account_id"

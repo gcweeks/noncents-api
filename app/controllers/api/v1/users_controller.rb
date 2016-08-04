@@ -354,8 +354,9 @@ class Api::V1::UsersController < ApplicationController
   def dev_deduct
     @authed_user.transactions.each do |transaction|
       next if transaction.invested
-      if transaction.backed_out
-        transaction.destroy
+      if transaction.archived || transaction.backed_out
+        # Archive in order to delete the Transaction if it is too old
+        transaction.archive!
         next
       end
       amount = transaction.amount * @authed_user.invest_percent / 100.0
@@ -390,8 +391,8 @@ class Api::V1::UsersController < ApplicationController
         agex.amount += transaction.amount_invested
         agex.save!
       end
-      # Destroy all old transactions, even if they haven't been invested
-      transaction.destroy
+      # Archive all old transactions, even if they haven't been invested
+      transaction.archive!
       @authed_user.reload
     end
     render json: @authed_user, status: :ok
@@ -414,27 +415,29 @@ class Api::V1::UsersController < ApplicationController
       rescue Plaid::PlaidError => e
         handle_plaid_error(e)
       end
-      # Push transaction if it is from an account that the user has added and
-      # matches one of the user's vices.
+      # Push Transaction if it is from an Account that the User has added and
+      # matches one of the User's Vices.
       transactions.each do |plaid_transaction|
-        # Skip transactions without categories, because it means we can't
+        # Skip Transactions without categories, because it means we can't
         # associate it with a Vice anyway.
         next unless plaid_transaction.category_hierarchy
-        # Skip transactions with negative amounts
+        # Skip Transactions with negative amounts
         next unless plaid_transaction.amount > 0.0
-        # Skip transactions created more than 2 weeks ago
+        # Skip Transactions created more than 2 weeks ago
         next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
-        # Skip transactions that the user already has
+        # Skip Transactions that the User already has, including archived
+        # Transactions.
         transaction_ids = @authed_user.transactions.map(&:plaid_id)
         next if transaction_ids.include? plaid_transaction.id
-        # Skip transactions for accounts that the user has not told us to track
+        # Skip Transactions for Accounts that the User has not told us to track
         account_ids = @authed_user.accounts.map(&:plaid_id)
+        # Skip transactions that don't apply to the User's Accounts
         next unless account_ids.include? plaid_transaction.account_id
         # Get Vice model via category, subcategory, and sub-subcategory
         vice = get_vice(plaid_transaction.category_hierarchy[0],
                         plaid_transaction.category_hierarchy[1],
                         plaid_transaction.category_hierarchy[2])
-        # Skip all transactions that aren't classified as a particular vice
+        # Skip all Transactions that aren't classified as a particular Vice
         next if vice.nil?
         next unless @authed_user.vices.include? vice
         # Create Transaction
@@ -442,8 +445,8 @@ class Api::V1::UsersController < ApplicationController
         account = Account.find_by(plaid_id: plaid_transaction.account_id)
         transaction.account = account
         transaction.vice = vice
+        transaction.user = @authed_user
         transaction.save!
-        @authed_user.transactions << transaction
       end if plaid_user.transactions
     end
     @authed_user.sync_date = DateTime.current

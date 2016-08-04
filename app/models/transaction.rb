@@ -4,12 +4,13 @@ class Transaction < ActiveRecord::Base
   belongs_to :vice
 
   # Validations
-  validates :plaid_id, presence: true
-  validates :date, presence: true
-  validates :amount, presence: true
-  validates :name, presence: true
-  validates :category_id, presence: true
   validates :account_id, presence: true
+  validates :amount, presence: true
+  validates :category_id, presence: true
+  validates :date, presence: true
+  validates :name, presence: true
+  validates :plaid_id, presence: true
+  validates :user, presence: true
   validates :vice, presence: true
 
   def as_json(options = {})
@@ -28,14 +29,33 @@ class Transaction < ActiveRecord::Base
     transaction.amount = plaid_transaction.amount
     transaction.name = plaid_transaction.name
     transaction.category_id = plaid_transaction.category_id
-    transaction.account_id = plaid_transaction.account_id
     transaction
   end
 
   def invest!(amount)
+    if self.archived
+      logger.warn "Tried to invest an archived transaction!"
+      return
+    end
     self.invested = true
     self.amount_invested += amount
     self.user.dwolla_transfer(amount)
     save!
+  end
+
+  def archive!
+    # Flag as archived. If older than some threshold, delete instead of
+    # archiving
+
+    # Currently don't delete any Transactions
+    # current_month = Date.current.beginning_of_month
+    if false #self.date.beginning_of_month < current_month - 1.month
+      # Delete if older than 1 month
+      self.destroy
+    elsif !self.archived
+      # Flag as archived
+      self.archived = true
+      self.save!
+    end
   end
 end
