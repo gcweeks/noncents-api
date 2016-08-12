@@ -16,7 +16,6 @@ class Api::V1::UsersController < ApplicationController
     user.create_fund
     # Save and check for validation errors
     if user.save
-      user.dwolla_create # TODO: Check for success
       # Send User model with token
       return render json: user.with_token, status: :ok
     end
@@ -233,6 +232,30 @@ class Api::V1::UsersController < ApplicationController
     end
     render json: { 'status' => 'failed to register' },
       status: :internal_server_error
+  end
+
+  def dwolla
+    unless params[:ssn]
+      errors = { ssn: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    addr = @authed_user.address
+    unless addr
+      errors = { address: ['is required'] }
+      return render json: errors, status: :bad_request unless params[:address]
+      addr = Address.new
+    end
+    if params[:address]
+      unless addr.update(address_params)
+        return render json: addr.errors, status: :unprocessable_entity
+      end
+    end
+    @authed_user.address = addr
+    @authed_user.save!
+    if @authed_user.dwolla_create(params[:ssn], request.remote_ip)
+      return head status: :ok
+    end
+    head status: :internal_server_error
   end
 
   def dev_refresh_transactions

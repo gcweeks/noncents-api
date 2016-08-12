@@ -42,7 +42,7 @@ class User < ActiveRecord::Base
   def as_json(options = {})
     json = super({
       include: [:fund, :address],
-      except: [:token, :password_digest, :fcm_key]
+      except: [:token, :password_digest, :fcm_key, :dwolla_id]
     }.merge(options))
     # 'include' wasn't calling as_json
     json['accounts'] = accounts
@@ -70,9 +70,19 @@ class User < ActiveRecord::Base
     self.token = token
   end
 
-  def dwolla_create
-    # TODO: Implement
-    # DwollaHelper.add_customer(self)
+  def dwolla_create(ssn, ip)
+    return false unless self.address && ssn && ip
+    ret = DwollaHelper.add_customer(self, ssn, ip)
+    if ret
+      if ret['id']
+        self.dwolla_id = ret['id']
+        self.save!
+        return true
+      end
+      logger.warn ret
+    end
+    logger.warn 'Error in dwolla_create'
+    false
   end
 
   # Add funding source and destination to Dwolla

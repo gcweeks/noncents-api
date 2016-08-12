@@ -458,13 +458,56 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Requires a token
     post :register_push_token
     assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['token'], ['is required']
 
-    # Requires a token
     post :register_push_token, token: '1234'
     # No actual registering is done on the test environment
     assert_response :ok
     res = JSON.parse(@response.body)
     assert_equal res['status'], 'registered'
+  end
+
+  test 'should create dwolla account' do
+    # Requires auth
+    post :dwolla
+    assert_response :unauthorized
+
+    @request.headers['Authorization'] = @user.token
+
+    # Requires ssn
+    post :dwolla
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['ssn'], ['is required']
+
+    post :dwolla, ssn: '123-45-6789'
+    assert_response :ok
+
+    # No address
+    # Store address for later
+    address = {
+      line1: '@user.address.line1',
+      line2: '@user.address.line2',
+      city: '@user.address.city',
+      state: '@user.address.state',
+      zip: '@user.address.zip'
+    }
+    @user.address.delete
+    post :dwolla, ssn: '123-45-6789'
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['address'], ['is required']
+
+    # Address in payload
+    post :dwolla, address: address, ssn: '123-45-6789'
+    assert_response :ok
+    @user.reload
+    assert_equal address[:line1], @user.address.line1
+    assert_equal address[:line2], @user.address.line2
+    assert_equal address[:city], @user.address.city
+    assert_equal address[:state], @user.address.state
+    assert_equal address[:zip], @user.address.zip
   end
 
   test 'should refresh transactions dev' do

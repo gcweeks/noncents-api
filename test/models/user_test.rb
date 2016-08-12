@@ -87,4 +87,50 @@ class UserTest < ActiveSupport::TestCase
     user.save!
     # user.reload
   end
+
+  test 'should generate token' do
+    user = users(:cashmoney)
+
+    # Token
+    assert_equal user.token, nil
+    user.generate_token
+    assert_not_equal user.token, nil
+  end
+
+  test 'should create dwolla account' do
+    user = users(:cashmoney)
+    user.generate_token
+    user.create_fund
+    user.password = 'Ca5hM0n3y'
+    user.address = addresses(:test_address)
+    user.address.save!
+    user.save!
+
+    assert_equal user.dwolla_id, nil
+
+    # Bad input
+    ret = user.dwolla_create(nil, '127.0.0.1')
+    assert_equal ret, false
+    assert_equal user.dwolla_id, nil
+    ret = user.dwolla_create('123-45-6789', nil)
+    assert_equal ret, false
+    assert_equal user.dwolla_id, nil
+
+    # Correct input
+    ret = user.dwolla_create('123-45-6789', '127.0.0.1')
+    assert_equal ret, true
+    assert_not_equal user.dwolla_id, nil
+  end
+
+  test 'should add dwolla funding source' do
+    # Not implemented
+  end
+
+  test 'should initiate dwolla transfer' do
+    # Not implemented
+  end
+
+  test 'should get yearly fund' do
+    # TODO Implement
+  end
 end

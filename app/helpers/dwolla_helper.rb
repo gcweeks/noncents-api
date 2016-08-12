@@ -27,10 +27,11 @@ module DwollaHelper
   end
 
   def self.add_customer(user, ssn, ip)
+    return nil unless user && user.address && ssn && ip
     # Format phone number for Dwolla
     phone = user.number
     phone.slice! '+1' if phone.length == 12
-    self.post('customers', {
+    ret = self.post('customers', {
       firstName: user.fname,
       lastName: user.lname,
       email: user.email,
@@ -47,6 +48,20 @@ module DwollaHelper
     }, {
       'Idempotency-Key': user.id.to_s
     })
+    return ret unless ret['_embedded'] # Error, Dwolla should provide this key
+    return ret['_embedded'] unless ret['_embedded']['errors']
+
+    # Error
+    if ret['_embedded']['errors'][0]['code'] == 'Duplicate'
+      existing = self.get('customers?search=' + user.email)
+      if existing['_embedded']['customers'].size > 0
+        existing = existing['_embedded']['customers'][0]
+        existing.delete('_links')
+        return existing
+      end
+    end
+    # No existing customer, forward the original error to the client
+    ret['_embedded']
   end
 
   def self.get_funding_source(user)
