@@ -1,5 +1,6 @@
 class User < ActiveRecord::Base
   include ActiveModel::Serializers::JSON
+  include ViceParser
   BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
   %w(0 O I l)
   PASSWORD_FORMAT = /\A
@@ -127,5 +128,54 @@ class User < ActiveRecord::Base
     yearly_fund = self.yearly_funds.new(year: year)
     yearly_fund.save!
     yearly_fund
+  end
+
+  def refresh_transactions(ignore_old)
+    # Get transactions from Plaid. Plaid delivers transactions on a per-bank
+    # basis, but they allow filtering by account which saves some time.
+    self.banks.each do |bank|
+      # Get Plaid model
+      begin
+        plaid_user = Plaid::User.load(:connect, bank.access_token)
+        transactions = plaid_user.transactions
+      rescue Plaid::PlaidError => e
+        handle_plaid_error(e)
+      end
+      # Push Transaction if it is from an Account that the User has added and
+      # matches one of the User's Vices.
+      transactions.each do |plaid_transaction|
+        # Skip Transactions without categories, because it means we can't
+        # associate it with a Vice anyway.
+        next unless plaid_transaction.category_hierarchy
+        # Skip Transactions with negative amounts
+        next unless plaid_transaction.amount > 0.0
+        # Skip Transactions created more than 2 weeks ago
+        next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
+        # Skip Transactions that the User already has, including archived
+        # Transactions.
+        transaction_ids = self.transactions.map(&:plaid_id)
+        next if transaction_ids.include? plaid_transaction.id
+        # Skip Transactions for Accounts that the User has not told us to track
+        account_ids = self.accounts.map(&:plaid_id)
+        # Skip transactions that don't apply to the User's Accounts
+        next unless account_ids.include? plaid_transaction.account_id
+        # Get Vice model via category, subcategory, and sub-subcategory
+        vice = get_vice(plaid_transaction.category_hierarchy[0],
+                        plaid_transaction.category_hierarchy[1],
+                        plaid_transaction.category_hierarchy[2])
+        # Skip all Transactions that aren't classified as a particular Vice
+        next if vice.nil?
+        next unless self.vices.include? vice
+        # Create Transaction
+        transaction = Transaction.from_plaid(plaid_transaction)
+        account = Account.find_by(plaid_id: plaid_transaction.account_id)
+        transaction.account = account
+        transaction.vice = vice
+        transaction.user = self
+        transaction.save!
+      end if plaid_user.transactions
+    end
+    self.sync_date = DateTime.current
+    self.save!
   end
 end

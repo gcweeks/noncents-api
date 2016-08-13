@@ -2,7 +2,6 @@ class Api::V1::UsersController < ApplicationController
   include UserHelper
   include DwollaHelper
   include NotificationHelper
-  include ViceParser
   before_action :init
   before_action :restrict_access, except: [:create]
 
@@ -129,21 +128,9 @@ class Api::V1::UsersController < ApplicationController
       return handle_plaid_error(e)
     end
 
-    set_bank params[:type], plaid_user.access_token
+    set_bank(params[:type], plaid_user.access_token)
 
-    if plaid_user.mfa?
-      # MFA
-      ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
-      return render json: ret, status: :ok
-    end
-
-    ret = populate_user_accounts @authed_user, plaid_user
-    # 'ret' will either be a successfully saved User model or an ActiveRecord
-    # error hash.
-    unless ret.is_a? User
-      return render json: ret, status: :internal_server_error
-    end
-    return render json: ret, status: :ok
+    render_mfa_or_populate(plaid_user)
   end
 
   # GET users/me/account_mfa
@@ -176,19 +163,7 @@ class Api::V1::UsersController < ApplicationController
       return handle_plaid_error(e)
     end
 
-    if plaid_user.mfa?
-      # More MFA
-      ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
-      return render json: ret, status: :ok
-    end
-
-    ret = populate_user_accounts @authed_user, plaid_user
-    # 'ret' will either be a successfully saved User model or an ActiveRecord
-    # error hash.
-    unless ret.is_a? User
-      return render json: ret, status: :internal_server_error
-    end
-    return render json: ret, status: :ok
+    render_mfa_or_populate(plaid_user)
   end
 
   # PUT users/me/remove_accounts
@@ -219,7 +194,9 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def refresh_transactions
-    perform_refresh_transactions(true)
+    @authed_user.refresh_transactions(true)
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   def register_push_token
@@ -261,7 +238,9 @@ class Api::V1::UsersController < ApplicationController
   def dev_refresh_transactions
     # The method argument lets us take in older transactions for testing
     # purposes.
-    perform_refresh_transactions(false)
+    @authed_user.refresh_transactions(false)
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   def dev_populate
@@ -439,55 +418,6 @@ class Api::V1::UsersController < ApplicationController
   end
 
   private
-
-  def perform_refresh_transactions(ignore_old)
-    # Get transactions for each bank
-    @authed_user.banks.each do |bank|
-      # Get Plaid model
-      begin
-        plaid_user = Plaid::User.load(:connect, bank.access_token)
-        transactions = plaid_user.transactions
-      rescue Plaid::PlaidError => e
-        handle_plaid_error(e)
-      end
-      # Push Transaction if it is from an Account that the User has added and
-      # matches one of the User's Vices.
-      transactions.each do |plaid_transaction|
-        # Skip Transactions without categories, because it means we can't
-        # associate it with a Vice anyway.
-        next unless plaid_transaction.category_hierarchy
-        # Skip Transactions with negative amounts
-        next unless plaid_transaction.amount > 0.0
-        # Skip Transactions created more than 2 weeks ago
-        next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
-        # Skip Transactions that the User already has, including archived
-        # Transactions.
-        transaction_ids = @authed_user.transactions.map(&:plaid_id)
-        next if transaction_ids.include? plaid_transaction.id
-        # Skip Transactions for Accounts that the User has not told us to track
-        account_ids = @authed_user.accounts.map(&:plaid_id)
-        # Skip transactions that don't apply to the User's Accounts
-        next unless account_ids.include? plaid_transaction.account_id
-        # Get Vice model via category, subcategory, and sub-subcategory
-        vice = get_vice(plaid_transaction.category_hierarchy[0],
-                        plaid_transaction.category_hierarchy[1],
-                        plaid_transaction.category_hierarchy[2])
-        # Skip all Transactions that aren't classified as a particular Vice
-        next if vice.nil?
-        next unless @authed_user.vices.include? vice
-        # Create Transaction
-        transaction = Transaction.from_plaid(plaid_transaction)
-        account = Account.find_by(plaid_id: plaid_transaction.account_id)
-        transaction.account = account
-        transaction.vice = vice
-        transaction.user = @authed_user
-        transaction.save!
-      end if plaid_user.transactions
-    end
-    @authed_user.sync_date = DateTime.current
-    @authed_user.save!
-    render json: @authed_user, status: :ok
-  end
 
   def user_params
     params.require(:user).permit(:fname, :lname, :password, :number, :dob,
