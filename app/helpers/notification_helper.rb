@@ -7,34 +7,31 @@ module NotificationHelper
   end
 
   def register_token_fcm(user, token)
-    return true if Rails.env.test?
-    return false unless token
-    init_notification_vars
-    url = URI.parse('https://fcm.googleapis.com/fcm/send')
-    http = Net::HTTP.new(url.host, url.port)
-    http.use_ssl = true
-    req = Net::HTTP::Post.new(url.to_s)
-    req['Authorization'] = 'key=' + @FIREBASE_KEY
-    req['Content-Type'] = 'application/json'
-    if user.fcm_key
-      req.body = {
-        'operation' => 'add',
-        'notification_key_name' => 'user_' + user.id.to_s,
-        'notification_key' => user.fcm_key,
-        'registration_ids' => [token]
-      }.to_json
-      ret = http.request(req)
-      # TODO check response
+    return false unless user && token
+
+    # The FcmToken model acts as a lookup table to see if a different User has
+    # previously registered the same device token before. This can happen if a
+    # client logs into another account on the same device.
+
+    # Find FcmToken or create one if it doesn't exist
+    fcm_token = FcmToken.find_by(token: token)
+    if fcm_token
+      # If User ID doesn't match, update it and remove token from old User.
+      if fcm_token.user_id != user.id
+        old_user = User.find_by(id: fcm_token.user_id)
+        if old_user && old_user.fcm_tokens.delete(token)
+          old_user.save!
+        end
+        fcm_token.user_id = user.id
+        fcm_token.save!
+      end
     else
-      req.body = {
-        'operation' => 'create',
-        'notification_key_name' => 'user_' + user.id.to_s,
-        'registration_ids' => [token]
-      }.to_json
-      ret = http.request(req)
-      fcm_key = ret.body['notification_key']
-      return false unless fcm_key
-      user.fcm_key = fcm_key
+      FcmToken.create(token: token, user_id: user.id)
+    end
+
+    # Add token to user
+    unless user.fcm_tokens.include?(token)
+      user.fcm_tokens.push token
       user.save!
     end
     true
@@ -42,9 +39,6 @@ module NotificationHelper
 
   def test_notification(user)
     return false unless user
-
-    # Populate Group
-    group = 'user_' + user.id.to_s
 
     # Populate Data
     data = {
@@ -61,8 +55,9 @@ module NotificationHelper
 
   private
 
-  def send_notification(group, data)
-    return nil if Rails.env.test?
+  def send_notification(user, data)
+    return true if Rails.env.test?
+    return false unless user && data
     init_notification_vars
     url = URI.parse('https://fcm.googleapis.com/fcm/send')
     http = Net::HTTP.new(url.host, url.port)
@@ -70,16 +65,23 @@ module NotificationHelper
     req = Net::HTTP::Post.new(url.to_s)
     req['Authorization'] = 'key=' + @FIREBASE_KEY
     req['Content-Type'] = 'application/json'
-    req.body = {
-      'to' => group,
-      'data' => data
-    }.to_json
-    res = http.request(req)
-    res.body
+
+    # Send notification to each of the User's registered devices
+    ret = true
+    for token in user.fcm_tokens
+      req.body = {
+        'to' => token,
+        'data' => data
+      }.to_json
+      res = http.request(req)
+      ret &&= process_response(res)
+    end
+    ret
   end
 
   def process_response(res)
+    logger.info "FCM Response: " + res.body
     # TODO: Process response
-    logger.info res
+    true
   end
 end

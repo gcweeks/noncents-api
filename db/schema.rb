@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160811184843) do
+ActiveRecord::Schema.define(version: 20160818003912) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -62,6 +62,15 @@ ActiveRecord::Schema.define(version: 20160811184843) do
     t.string   "access_token"
     t.uuid     "user_id"
   end
+
+  create_table "fcm_tokens", force: :cascade do |t|
+    t.string   "token"
+    t.uuid     "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_index "fcm_tokens", ["token"], name: "index_fcm_tokens_on_token", using: :btree
 
   create_table "funds", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.decimal  "balance",         default: 0.0
@@ -115,8 +124,8 @@ ActiveRecord::Schema.define(version: 20160811184843) do
     t.integer  "invest_percent",  default: 0
     t.datetime "sync_date"
     t.integer  "goal",            default: 150
-    t.string   "fcm_key"
     t.string   "dwolla_id"
+    t.string   "fcm_tokens",      default: [],               array: true
   end
 
   create_table "vices", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|

@@ -43,7 +43,7 @@ class User < ActiveRecord::Base
   def as_json(options = {})
     json = super({
       include: [:fund, :address],
-      except: [:token, :password_digest, :fcm_key, :dwolla_id]
+      except: [:token, :password_digest, :fcm_tokens, :dwolla_id]
     }.merge(options))
     # 'include' wasn't calling as_json
     json['accounts'] = accounts
@@ -122,7 +122,7 @@ class User < ActiveRecord::Base
   # Jan-Mar when they haven't deposited their $5500 max.
   def yearly_fund
     year = Date.current.year # e.g. 2016 (Integer)
-    yearly_fund = self.yearly_funds.where(year: year).first
+    yearly_fund = self.yearly_funds.find_by(year: year)
     return yearly_fund unless yearly_fund.nil?
     # No yearly_fund model found matching this year, create one
     yearly_fund = self.yearly_funds.new(year: year)

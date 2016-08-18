@@ -135,7 +135,7 @@ class Api::V1::ApiController < ApplicationController
         # Aggregate old Transactions
         logger.info 'CRON: Aggregating Transaction, month: ' + month.to_s
         agexes = user.agexes.where(month: month)
-        agex = agexes.where(vice_id: transaction.vice.id).first
+        agex = agexes.find_by(vice_id: transaction.vice.id)
         unless agex
           logger.info 'CRON: Creating new Agex for ' + transaction.vice.name +
             ' Vice'

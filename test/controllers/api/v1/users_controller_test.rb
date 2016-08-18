@@ -461,11 +461,88 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     res = JSON.parse(@response.body)
     assert_equal res['token'], ['is required']
 
-    post :register_push_token, token: '1234'
-    # No actual registering is done on the test environment
+    # Ensure no token already exists
+    fcm_token_string_1 = '1234'
+    fcm_token = FcmToken.find_by(token: fcm_token_string_1)
+    assert_equal fcm_token, nil
+    assert_not @user.fcm_tokens.include?(fcm_token_string_1)
+
+    # Register token
+    post :register_push_token, token: fcm_token_string_1
     assert_response :ok
     res = JSON.parse(@response.body)
     assert_equal res['status'], 'registered'
+
+    # Ensure token was successfully registered
+    @user.reload
+    fcm_token = FcmToken.find_by(token: fcm_token_string_1)
+    assert_not_equal fcm_token, nil
+    assert_equal fcm_token.token, fcm_token_string_1
+    assert_equal fcm_token.user_id, @user.id
+    assert @user.fcm_tokens.include?(fcm_token_string_1)
+
+    # Add another token
+    fcm_token_string_2 = '5678'
+    post :register_push_token, token: fcm_token_string_2
+    assert_response :ok
+    res = JSON.parse(@response.body)
+    assert_equal res['status'], 'registered'
+    @user.reload
+    # Ensure User still has both tokens
+    # Token 1
+    fcm_token = FcmToken.find_by(token: fcm_token_string_1)
+    assert_not_equal fcm_token, nil
+    assert_equal fcm_token.token, fcm_token_string_1
+    assert_equal fcm_token.user_id, @user.id
+    assert @user.fcm_tokens.include?(fcm_token_string_1)
+    # Token 2
+    fcm_token = FcmToken.find_by(token: fcm_token_string_2)
+    assert_not_equal fcm_token, nil
+    assert_equal fcm_token.token, fcm_token_string_2
+    assert_equal fcm_token.user_id, @user.id
+    assert @user.fcm_tokens.include?(fcm_token_string_2)
+
+    # Change Token 1 User
+    # Create new User
+    user_2 = User.new
+    user_2.fname = @user.fname
+    user_2.lname = @user.lname
+    user_2.number = @user.number
+    user_2.email = 'new@email.com'
+    user_2.dob = @user.dob
+    user_2.invest_percent = @user.invest_percent
+    user_2.goal = @user.goal
+    user_2.password = 'Ca5hM0n3y'
+    user_2.generate_token
+    user_2.create_fund
+    address_2 = Address.new
+    address_2.line1 = @user.address.line1
+    address_2.line2 = @user.address.line2
+    address_2.city = @user.address.city
+    address_2.state = @user.address.state
+    address_2.zip = @user.address.zip
+    address_2.save!
+    user_2.address = address_2
+    user_2.save!
+    @request.headers['Authorization'] = user_2.token
+    # Register token
+    post :register_push_token, token: fcm_token_string_1
+    assert_response :ok
+    res = JSON.parse(@response.body)
+    assert_equal res['status'], 'registered'
+    # Ensure user_2 has token
+    user_2.reload
+    fcm_token = FcmToken.find_by(token: fcm_token_string_1)
+    assert_not_equal fcm_token, nil
+    assert_equal fcm_token.token, fcm_token_string_1
+    assert_equal fcm_token.user_id, user_2.id
+    assert user_2.fcm_tokens.include?(fcm_token_string_1)
+    # Ensure @user no longer has token
+    @user.reload
+    assert_not @user.fcm_tokens.include?(fcm_token_string_1)
+    # @user should still have other token, user_2 should not
+    assert @user.fcm_tokens.include?(fcm_token_string_2)
+    assert_not user_2.fcm_tokens.include?(fcm_token_string_2)
   end
 
   test 'should create dwolla account' do
