@@ -1,2 +1,0 @@
-# The newline at the end of this file is necessary for cron to run.
-20 4 * * 1 root curl --data '' http://localhost/api/v1/weekly_cron > /dev/null

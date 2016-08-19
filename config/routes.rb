@@ -7,13 +7,14 @@ Rails.application.routes.draw do
       resources :vices, only: [:index]
 
       # Calls that do not requre an access token
-      get  '/'               => 'api#request_get'
-      post '/'               => 'api#request_post'
-      get  'auth'            => 'api#auth'
-      get  'check_email'     => 'api#check_email'
-      get  'twilio_callback' => 'api#twilio_callback'
-      get  'plaid_callback'  => 'api#plaid_callback'
-      post 'weekly_cron'     => 'api#weekly_cron'
+      get  '/'                        => 'api#request_get'
+      post '/'                        => 'api#request_post'
+      get  'auth'                     => 'api#auth'
+      get  'check_email'              => 'api#check_email'
+      get  'twilio_callback'          => 'api#twilio_callback'
+      get  'plaid_callback'           => 'api#plaid_callback'
+      post 'weekly_deduct_cron'       => 'api#weekly_deduct_cron'
+      post 'transaction_refresh_cron' => 'api#transaction_refresh_cron'
       scope 'version' do
         get 'ios' => 'api#version_ios'
       end

@@ -46,7 +46,11 @@ class Api::V1::ApiControllerTest < ActionController::TestCase
     assert_equal 'exists', res['email']
   end
 
-  test 'should perform weekly cron' do
+  test 'should perform weekly deduct cron' do
+    # Not implemented
+  end
+
+  test 'should perform transaction refresh cron' do
     # Not implemented
   end
 

@@ -1,0 +1,3 @@
+20 4 * * 1 root curl --data '' http://localhost/api/v1/weekly_deduct_cron > /dev/null
+20 4 * * 0,3 root curl --data '' http://localhost/api/v1/transaction_refresh_cron > /dev/null
+# The newline at the end of this file is necessary for cron to run.

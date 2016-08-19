@@ -10,8 +10,8 @@ class Api::V1::ApiController < ApplicationController
     :signup,
     :check_email,
     :twilio_callback,
-    :weekly_cron,
-    :test_cron,
+    :weekly_deduct_cron,
+    :transaction_refresh_cron,
     :version_ios
   ]
 
@@ -78,13 +78,12 @@ class Api::V1::ApiController < ApplicationController
     head :ok
   end
 
-  def weekly_cron
+  def weekly_deduct_cron
     return head :not_found unless request.remote_ip == '127.0.0.1'
 
     current_month = Date.current.beginning_of_month
     logger.info DateTime.current.strftime(
-      "CRON: Start weekly_cron at %Y-%m-%d %H:%M:%S::%L %z, current_month: " +
-      current_month.to_s)
+      "CRON: Start weekly_deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
 
     User.all.each do |user|
       logger.info 'CRON: Starting Transaction processing for ' + user.fname +
@@ -154,7 +153,24 @@ class Api::V1::ApiController < ApplicationController
     end
 
     logger.info DateTime.current.strftime(
-      "CRON: Finished weekly_cron at %Y-%m-%d %H:%M:%S::%L %z")
+      "CRON: Finished weekly_deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")
+    head status: :ok
+  end
+
+  def transaction_refresh_cron
+    return head :not_found unless request.remote_ip == '127.0.0.1'
+
+    logger.info DateTime.current.strftime(
+      "CRON: Start transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
+
+    User.all.each do |user|
+      logger.info 'CRON: Starting Transaction refreshing for ' + user.fname +
+        ' ' + user.lname + ' (' + user.id.to_s + ')'
+      user.refresh_transactions(true)
+    end
+
+    logger.info DateTime.current.strftime(
+      "CRON: Finished transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
     head status: :ok
   end
 

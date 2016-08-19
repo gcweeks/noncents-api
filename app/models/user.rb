@@ -139,7 +139,23 @@ class User < ActiveRecord::Base
         plaid_user = Plaid::User.load(:connect, bank.access_token)
         transactions = plaid_user.transactions
       rescue Plaid::PlaidError => e
-        handle_plaid_error(e)
+        status = case e
+        when Plaid::BadRequestError
+          'bad_request'
+        when Plaid::UnauthorizedError
+          'unauthorized'
+        when Plaid::RequestFailedError
+          'payment_required'
+        when Plaid::NotFoundError
+          'not_found'
+        when Plaid::ServerError
+          'internal_server_error'
+        else
+          'internal_server_error'
+        end
+        logger.warn 'Plaid Error: (' + e.code + ') ' + e.message + '. ' +
+          e.resolve + ' [' + status + ']'
+        next
       end
       # Push Transaction if it is from an Account that the User has added and
       # matches one of the User's Vices.
