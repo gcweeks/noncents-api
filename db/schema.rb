@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160818003912) do
+ActiveRecord::Schema.define(version: 20160819230341) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -30,7 +30,10 @@ ActiveRecord::Schema.define(version: 20160818003912) do
     t.string   "account_type"
     t.string   "account_subtype"
     t.uuid     "user_id"
+    t.uuid     "bank_id"
   end
+
+  add_index "accounts", ["bank_id"], name: "index_accounts_on_bank_id", using: :btree
 
   create_table "addresses", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.string   "line1"

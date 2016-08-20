@@ -128,9 +128,9 @@ class Api::V1::UsersController < ApplicationController
       return handle_plaid_error(e)
     end
 
-    set_bank(params[:type], plaid_user.access_token)
+    set_bank(@authed_user, params[:type], plaid_user.access_token)
 
-    render_mfa_or_populate(plaid_user)
+    render_mfa_or_populate(@authed_user, plaid_user)
   end
 
   # GET users/me/account_mfa
@@ -162,8 +162,7 @@ class Api::V1::UsersController < ApplicationController
     rescue Plaid::PlaidError => e
       return handle_plaid_error(e)
     end
-
-    render_mfa_or_populate(plaid_user)
+    render_mfa_or_populate(@authed_user, plaid_user)
   end
 
   # PUT users/me/remove_accounts

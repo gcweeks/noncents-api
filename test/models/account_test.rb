@@ -3,6 +3,10 @@ require 'test_helper'
 class AccountTest < ActiveSupport::TestCase
   test 'validations' do
     account = accounts(:test_account)
+    user = users(:cashmoney)
+    bank = banks(:test_bank)
+    bank.user = user
+    account.bank = bank
     assert account.save, 'Couldn\'t save valid Account'
 
     # Plaid ID
@@ -28,5 +32,10 @@ class AccountTest < ActiveSupport::TestCase
     account.institution = nil
     assert_not account.save, 'Saved Account without institution'
     account.institution = institution
+
+    # Bank
+    account.bank = nil
+    assert_not account.save, 'Saved Account without bank'
+    account.bank = bank
   end
 end

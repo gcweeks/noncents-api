@@ -338,20 +338,30 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     # MFA
     @user.reload
+    assert_equal @user.banks.size, 0
     assert_equal @user.accounts.size, 0
     get :account_connect, username: username, password: password, type: type
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal res['mfa_type'], 'list'
     @user.reload
-    assert_equal @user.accounts.size, 0 # Still 0
+    # Bank saved for reference
+    assert_equal @user.banks.size, 1
+    # Still 0
+    assert_equal @user.accounts.size, 0
 
     # Successfully acquired bank accounts
     type = 'wells' # No MFA
     get :account_connect, username: username, password: password, type: type
     assert_response :success
     @user.reload
-    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    assert_equal @user.banks.size, 2 # chase and wells
+    # Has at least one Account now
+    assert_not_equal @user.accounts.size, 0
+    @user.accounts.each do |account|
+      bank = @user.banks.find_by(name: type)
+      assert_equal account.bank_id, bank.id
+    end
   end
 
   test 'should mfa with plaid' do
@@ -365,6 +375,18 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :unauthorized
 
     @request.headers['Authorization'] = @user.token
+
+    # Send initial call
+    get :account_connect, username: 'plaid_test', password: 'plaid_good',
+      type: 'chase'
+    assert_response :success
+    res = JSON.parse(@response.body)
+    assert_equal res['mfa_type'], 'list'
+    @user.reload
+    # Bank saved for reference
+    assert_equal @user.banks.size, 1
+    # Still 0
+    assert_equal @user.accounts.size, 0
 
     # Requires access_token and either answer, mask, or type
     get :account_mfa
@@ -390,11 +412,20 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     # Correct MFA answer
     @user.reload
-    assert_equal @user.accounts.size, 0 # Still 0
+    # Bank saved for reference
+    assert_equal @user.banks.size, 1
+    # Still 0
+    assert_equal @user.accounts.size, 0
     get :account_mfa, access_token: access_token, answer: answer
     assert_response :success
     @user.reload
-    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    assert_equal @user.banks.size, 1
+    # Has at least one Account now
+    assert_not_equal @user.accounts.size, 0
+    @user.accounts.each do |account|
+      bank = @user.banks.find_by(name: 'chase')
+      assert_equal account.bank_id, bank.id
+    end
   end
 
   test 'should remove accounts' do
