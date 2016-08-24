@@ -155,7 +155,7 @@ class User < ActiveRecord::Base
         else
           'internal_server_error'
         end
-        logger.warn 'Plaid Error: (' + e.code + ') ' + e.message + '. ' +
+        logger.warn 'Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
           e.resolve + ' [' + status + ']'
         next
       end
