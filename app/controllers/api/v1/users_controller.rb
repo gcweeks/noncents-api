@@ -165,8 +165,66 @@ class Api::V1::UsersController < ApplicationController
     render_mfa_or_populate(@authed_user, plaid_user)
   end
 
-  # PUT users/me/remove_accounts
+  # PUT users/me/accounts
+  def update_accounts
+    # Validate client input and look up Account models
+    source_account, deposit_account, e1 =
+      validate_deduction_accounts_payload(params[:source], params[:deposit])
+    tracking_accounts, e2 =
+      validate_tracking_accounts_payload(params[:tracking])
+    errors = e1.merge(e2) { |k, o, n| o + n } # Key, old, new
+    if source_account.nil? && deposit_account.nil? && tracking_accounts.blank?
+      errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
+    end
+    unless errors.blank?
+      return render json: errors, status: :bad_request
+    end
+
+    # Set Source/Deposit Accounts
+    @authed_user.source_account = source_account if source_account
+    @authed_user.deposit_account = deposit_account if deposit_account
+    @authed_user.save!
+
+    # Set Tracking Accounts
+    tracking_accounts.each do |account|
+      account.tracking = true
+      account.save!
+    end if tracking_accounts
+
+    render json: @authed_user, status: :ok
+  end
+
+  # DELETE users/me/accounts
   def remove_accounts
+    # Validate client input and look up Account models
+    tracking_accounts, errors =
+      validate_tracking_accounts_payload(params[:tracking])
+    if !params.has_key?(:source) && !params.has_key?(:deposit) &&
+      tracking_accounts.blank?
+
+      errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
+    end
+    unless errors.blank?
+      return render json: errors, status: :bad_request
+    end
+
+    # Remove Source/Deposit Accounts
+    @authed_user.source_account = nil if params.has_key?(:source)
+    @authed_user.deposit_account = nil if params.has_key?(:deposit)
+    @authed_user.save!
+
+    # Remove Tracking Accounts
+    tracking_accounts.each do |account|
+      account.tracking = false
+      account.save!
+    end if tracking_accounts
+
+    render json: @authed_user, status: :ok
+  end
+
+  # TODO Deprecated
+  # PUT users/me/remove_accounts
+  def remove_accounts_old
     unless params[:accounts]
       errors = { accounts: ['are required'] }
       return render json: errors, status: :bad_request
@@ -454,4 +512,50 @@ class Api::V1::UsersController < ApplicationController
       'resolve' => e.resolve
     }, status: status
   end
+
+  def validate_deduction_accounts_payload(source, deposit)
+    errors = {}
+    if !source.nil?
+      if source.is_a?(String)
+        source_account = Account.find_by(id: source)
+        if source_account.nil?
+          errors[:source] = ['Account not found']
+        end
+      else
+        errors[:source] = ['is incorrectly formatted - must be of type String']
+      end
+    end
+    if !deposit.nil?
+      if deposit.is_a?(String)
+        deposit_account = Account.find_by(id: deposit)
+        if deposit_account.nil?
+          errors[:deposit] = ['Account not found']
+        end
+      else
+        errors[:deposit] = ['is incorrectly formatted - must be of type String']
+      end
+    end
+    return source_account, deposit_account, errors
+  end
+
+  def validate_tracking_accounts_payload(tracking)
+    errors = {}
+    if !tracking.nil?
+      if tracking.is_a?(Array)
+        tracking_accounts = []
+        tracking.each do |tracking_account_id|
+          tracking_account = Account.find_by(id: tracking_account_id)
+          if tracking_account.nil?
+            errors[:tracking] = ['Account not found']
+          else
+            tracking_accounts.push(tracking_account)
+          end
+        end
+      else
+        errors[:tracking] = ['is incorrectly formatted - must be of type Array']
+      end
+    end
+    return tracking_accounts, errors
+  end
+
 end

@@ -22,6 +22,8 @@ class User < ActiveRecord::Base
   has_one  :fund
   has_one  :address
   has_many :yearly_funds
+  belongs_to :source_account, :class_name => "Account"
+  belongs_to :deposit_account, :class_name => "Account"
   has_secure_password
 
   # Validations

@@ -428,9 +428,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     end
   end
 
-  test 'should remove accounts' do
+  test 'should update and remove accounts' do
     # Requires auth
-    put :remove_accounts
+    put :update_accounts
     assert_response :unauthorized
 
     @request.headers['Authorization'] = @user.token
@@ -444,35 +444,139 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
     account_ids = @user.accounts.map(&:id)
 
-    # Requires at least one account
-    put :remove_accounts
+    # Requires one or more of the following: source, deposit, tracking
+    put :update_accounts
     assert_response :bad_request
 
-    # Requires accounts to be in array format
-    put :remove_accounts, accounts: account_ids[0]
-    assert_response :bad_request
+    # Ensure no Account is set yet
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[2])
+    assert_equal account.tracking, false
 
-    # Remove 1 account
-    put :remove_accounts, accounts: [account_ids[0]]
+    # Set Accounts
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1],
+      tracking: [account_ids[0], account_ids[1]]
     assert_response :success
     @user.reload
-    assert_equal account_ids.size - @user.accounts.size, 1
-    new_ids = @user.accounts.map(&:id)
-    assert_not_includes new_ids, account_ids[0]
-    assert_includes new_ids, account_ids[1]
-    assert_includes new_ids, account_ids[2]
-    assert_includes new_ids, account_ids[3]
-
-    # Remove multiple accounts
-    put :remove_accounts, accounts: [account_ids[1], account_ids[2]]
+    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.deposit_account.id, account_ids[1]
+    # Verify that setting tracking was successful
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, true
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+    account = Account.find_by(id: account_ids[2])
+    assert_equal account.tracking, false
+    # Idempotency
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1],
+      tracking: [account_ids[0], account_ids[1]]
     assert_response :success
     @user.reload
-    assert_equal account_ids.size - @user.accounts.size, 3
-    new_ids = @user.accounts.map(&:id)
-    assert_not_includes new_ids, account_ids[0]
-    assert_not_includes new_ids, account_ids[1]
-    assert_not_includes new_ids, account_ids[2]
-    assert_includes new_ids, account_ids[3]
+    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.deposit_account.id, account_ids[1]
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, true
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+
+    # Remove Accounts
+    delete :remove_accounts, source: nil, deposit: 'blah',
+      tracking: [account_ids[0], account_ids[1]]
+    res = JSON.parse(@response.body)
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    # Verify that setting tracking was successful
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, false
+
+    # Set only Source
+    put :update_accounts, source: account_ids[0]
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, false
+    delete :remove_accounts, source: nil
+    assert_response :success
+
+    # Set only Deposit
+    put :update_accounts, deposit: account_ids[1]
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account.id, account_ids[1]
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, false
+    delete :remove_accounts, deposit: nil
+    assert_response :success
+
+    # Set only Tracking
+    put :update_accounts, tracking: [account_ids[1]]
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+    delete :remove_accounts, tracking: [account_ids[1]]
+    assert_response :success
+
+    # Repopulate
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1],
+      tracking: [account_ids[0], account_ids[1]]
+    assert_response :success
+
+    # Remove only Source
+    delete :remove_accounts, source: nil
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account.id, account_ids[1]
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, true
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+    put :update_accounts, source: account_ids[0]
+
+    # Remove only Deposit
+    delete :remove_accounts, deposit: nil
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, true
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+    put :update_accounts, deposit: account_ids[1]
+
+    # Remove only Tracking
+    delete :remove_accounts, tracking: [account_ids[0]]
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.deposit_account.id, account_ids[1]
+    account = Account.find_by(id: account_ids[0])
+    assert_equal account.tracking, false
+    account = Account.find_by(id: account_ids[1])
+    assert_equal account.tracking, true
+    put :update_accounts, tracking: [account_ids[0]]
   end
 
   test 'should refresh transactions' do

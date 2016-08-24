@@ -11,15 +11,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160819230341) do
+ActiveRecord::Schema.define(version: 20160822231707) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
   enable_extension "uuid-ossp"
 
   create_table "accounts", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
-    t.datetime "created_at",                  null: false
-    t.datetime "updated_at",                  null: false
+    t.datetime "created_at",                                  null: false
+    t.datetime "updated_at",                                  null: false
     t.string   "plaid_id"
     t.string   "name"
     t.string   "institution"
@@ -31,6 +31,7 @@ ActiveRecord::Schema.define(version: 20160819230341) do
     t.string   "account_subtype"
     t.uuid     "user_id"
     t.uuid     "bank_id"
+    t.boolean  "tracking",                    default: false
   end
 
   add_index "accounts", ["bank_id"], name: "index_accounts_on_bank_id", using: :btree
@@ -119,17 +120,22 @@ ActiveRecord::Schema.define(version: 20160819230341) do
     t.string   "lname"
     t.string   "number"
     t.string   "token"
-    t.datetime "created_at",                    null: false
-    t.datetime "updated_at",                    null: false
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
     t.string   "email"
     t.string   "password_digest"
     t.date     "dob"
-    t.integer  "invest_percent",  default: 0
+    t.integer  "invest_percent",     default: 0
     t.datetime "sync_date"
-    t.integer  "goal",            default: 150
+    t.integer  "goal",               default: 150
     t.string   "dwolla_id"
-    t.string   "fcm_tokens",      default: [],               array: true
+    t.string   "fcm_tokens",         default: [],               array: true
+    t.uuid     "source_account_id"
+    t.uuid     "deposit_account_id"
   end
+
+  add_index "users", ["deposit_account_id"], name: "index_users_on_deposit_account_id", using: :btree
+  add_index "users", ["source_account_id"], name: "index_users_on_source_account_id", using: :btree
 
   create_table "vices", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
     t.datetime "created_at", null: false
