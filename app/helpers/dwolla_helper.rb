@@ -28,14 +28,10 @@ module DwollaHelper
 
   def self.add_customer(user, ssn, ip)
     return nil unless user && user.address && ssn && ip
-    # Format phone number for Dwolla
-    phone = user.number
-    phone.slice! '+1' if phone.length == 12
     ret = self.post('customers', {
       firstName: user.fname,
       lastName: user.lname,
       email: user.email,
-      phone: phone,
       ipAddress: ip,
       type: 'personal',
       address1: user.address.line1,
