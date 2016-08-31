@@ -458,6 +458,13 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     account = Account.find_by(id: account_ids[2])
     assert_equal account.tracking, false
 
+    # Requires Dwolla to be authed
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1],
+      tracking: [account_ids[0], account_ids[1]]
+    assert_response :bad_request
+    post :dwolla, ssn: '123-45-6789'
+    assert_response :ok
+
     # Set Accounts
     put :update_accounts, source: account_ids[0], deposit: account_ids[1],
       tracking: [account_ids[0], account_ids[1]]
@@ -472,6 +479,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal account.tracking, true
     account = Account.find_by(id: account_ids[2])
     assert_equal account.tracking, false
+
     # Idempotency
     put :update_accounts, source: account_ids[0], deposit: account_ids[1],
       tracking: [account_ids[0], account_ids[1]]
@@ -487,7 +495,6 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Remove Accounts
     delete :remove_accounts, source: nil, deposit: 'blah',
       tracking: [account_ids[0], account_ids[1]]
-    res = JSON.parse(@response.body)
     assert_response :success
     @user.reload
     assert_equal @user.source_account, nil

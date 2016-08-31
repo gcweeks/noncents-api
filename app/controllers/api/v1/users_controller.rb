@@ -181,9 +181,35 @@ class Api::V1::UsersController < ApplicationController
     end
 
     # Set Source/Deposit Accounts
-    @authed_user.source_account = source_account if source_account
-    @authed_user.deposit_account = deposit_account if deposit_account
-    @authed_user.save!
+    if source_account || deposit_account
+      if @authed_user.dwolla_id
+        if source_account
+          if source_account.account_subtype != 'savings' &&
+             source_account.account_subtype != 'checking'
+
+            errors[:source] = ['must be of type "savings" or "checking"']
+          else
+            @authed_user.source_account = source_account
+          end
+        end
+        if deposit_account
+          if deposit_account.account_subtype != 'savings' &&
+             deposit_account.account_subtype != 'checking'
+
+            errors[:deposit] = ['must be of type "savings" or "checking"']
+          else
+            @authed_user.deposit_account = deposit_account
+          end
+        end
+      else
+        errors[:general] = ['User is not yet verified with Dwolla']
+      end
+      unless errors.blank?
+        return render json: errors, status: :bad_request
+      end
+      @authed_user.save!
+      @authed_user.dwolla_add_funding_sources
+    end
 
     # Set Tracking Accounts
     tracking_accounts.each do |account|
@@ -191,6 +217,7 @@ class Api::V1::UsersController < ApplicationController
       account.save!
     end if tracking_accounts
 
+    @authed_user.reload
     render json: @authed_user, status: :ok
   end
 
@@ -209,9 +236,15 @@ class Api::V1::UsersController < ApplicationController
     end
 
     # Remove Source/Deposit Accounts
-    @authed_user.source_account = nil if params.has_key?(:source)
-    @authed_user.deposit_account = nil if params.has_key?(:deposit)
-    @authed_user.save!
+    if params.has_key?(:source) || params.has_key?(:deposit)
+      if params.has_key?(:source)
+        @authed_user.source_account = nil
+      end
+      if params.has_key?(:deposit)
+        @authed_user.deposit_account = nil
+      end
+      @authed_user.save!
+    end
 
     # Remove Tracking Accounts
     tracking_accounts.each do |account|
@@ -320,19 +353,21 @@ class Api::V1::UsersController < ApplicationController
       plaid_id: 'QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK',
       name: 'Plaid Savings',
       institution: 'fake_institution',
-      account_num: 0,
-      routing_num: 0,
+      account_num: '9900009606',
+      routing_num: '021000021',
       account_type: 'depository',
       account_subtype: 'savings')
+    account_savings.bank = bank
     account_savings.save!
     account_checking = @authed_user.accounts.new(
       plaid_id: 'nban4wnPKEtnmEpaKzbYFYQvA7D7pnCaeDBMy',
       name: 'Plaid Checking',
       institution: 'fake_institution',
-      account_num: 0,
-      routing_num: 0,
+      account_num: '1234567890',
+      routing_num: '222222226',
       account_type: 'depository',
       account_subtype: 'checking')
+    account_checking.bank = bank
     account_checking.save!
 
     transaction = @authed_user.transactions.new(
@@ -489,28 +524,6 @@ class Api::V1::UsersController < ApplicationController
 
   def address_params
     params.require(:address).permit(:line1, :line2, :city, :state, :zip)
-  end
-
-  def handle_plaid_error(e)
-    status = case e
-    when Plaid::BadRequestError
-      :bad_request
-    when Plaid::UnauthorizedError
-      :unauthorized
-    when Plaid::RequestFailedError
-      :payment_required
-    when Plaid::NotFoundError
-      :not_found
-    when Plaid::ServerError
-      :internal_server_error
-    else
-      :internal_server_error
-    end
-    render json: {
-      'code' => e.code,
-      'message' => e.message,
-      'resolve' => e.resolve
-    }, status: status
   end
 
   def validate_deduction_accounts_payload(source, deposit)

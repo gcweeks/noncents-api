@@ -8,6 +8,7 @@ module DwollaHelper
     config.environment = :sandbox
     # TODO
     # config.environment = :production
+    # Also change instances of api-uat
   end
 
   @@account_token = $dwolla.tokens.new(
@@ -60,19 +61,31 @@ module DwollaHelper
     ret['_embedded']
   end
 
-  def self.get_funding_source(user)
+  # TODO Unused. Necessary?
+  def self.get_funding_sources(user)
     self.get('customers/' + user.dwolla_id + '/funding-sources')
   end
 
   def self.add_funding_source(user, account)
-    self.post('customers/' + user.dwolla_id + '/funding-sources', {
+    return nil if account.dwolla_id != nil
+    res = self.post('customers/' + user.dwolla_id + '/funding-sources', {
       routingNumber: account.routing_num,
       accountNumber: account.account_num,
-      type: 'checking', # TODO
+      type: account.account_subtype,
       name: account.name
     }, {
-      'Idempotency-Key': user.dwolla_id + account.account_num
+      'Idempotency-Key': user.dwolla_id + account.account_num.to_s
     })
+
+    funding_source = res.headers['location']
+    # TODO: Check for prod URL as well
+    if funding_source.slice! 'https://api-uat.dwolla.com/funding-sources/'
+       account.dwolla_id = funding_source
+       account.save!
+       return nil
+    end
+    logger.warn res
+    res
   end
 
   def self.transfer_money(customer_id, funding_source, amount)

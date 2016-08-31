@@ -7,19 +7,6 @@ Plaid.config do |p|
   p.secret = 'c0704f2af851cd5996579b70327700' unless p.secret
 end
 
-## Some Plaid notes:
-#
-#
-## Authenticate user
-# user = Plaid.add_user('auth', 'plaid_test', 'plaid_good', 'wells')
-#
-#
-## Get existing user based on plaid access token
-## Notice I can change 'auth' to 'connect'
-# user_new = Plaid.set_user(user.access_token, ['connect'])
-#
-#
-#
 ## Models:
 ## User:
 # accounts: [Account]

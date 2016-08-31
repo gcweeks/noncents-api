@@ -17,6 +17,12 @@ module UserHelper
     end
 
     # No MFA required
+    # Add 'auth' product to get full account numbers
+    begin
+      plaid_user = plaid_user.upgrade(:auth)
+    rescue Plaid::PlaidError => e
+      return handle_plaid_error(e)
+    end
     ret = populate_user_accounts(user, plaid_user)
     # 'ret' will either be a successfully saved User model or an ActiveRecord
     # error hash.
@@ -24,6 +30,28 @@ module UserHelper
       return render json: ret, status: :internal_server_error
     end
     render json: ret, status: :ok
+  end
+
+  def handle_plaid_error(e)
+    status = case e
+    when Plaid::BadRequestError
+      :bad_request
+    when Plaid::UnauthorizedError
+      :unauthorized
+    when Plaid::RequestFailedError
+      :payment_required
+    when Plaid::NotFoundError
+      :not_found
+    when Plaid::ServerError
+      :internal_server_error
+    else
+      :internal_server_error
+    end
+    render json: {
+      'code' => e.code,
+      'message' => e.message,
+      'resolve' => e.resolve
+    }, status: status
   end
 
   private

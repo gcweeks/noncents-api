@@ -75,23 +75,33 @@ class User < ActiveRecord::Base
 
   def dwolla_create(ssn, ip)
     return false unless self.address && ssn && ip
-    ret = DwollaHelper.add_customer(self, ssn, ip)
-    if ret
-      if ret['id']
-        self.dwolla_id = ret['id']
+    res = DwollaHelper.add_customer(self, ssn, ip)
+    if res
+      if res['id']
+        self.dwolla_id = res['id']
         self.save!
         return true
       end
-      logger.warn ret
+      logger.warn res
     end
     logger.warn 'Error in dwolla_create'
     false
   end
 
   # Add funding source and destination to Dwolla
-  def dwolla_add_funding_source
-    # TODO: Implement
-    # DwollaHelper.add_funding_source(customer_id)
+  def dwolla_add_funding_sources
+    ret = true
+    if self.source_account
+      res = DwollaHelper.add_funding_source(self, self.source_account)
+      # nil returned means everything went well
+      ret = false if res != nil
+    end
+    if self.deposit_account
+      res = DwollaHelper.add_funding_source(self, self.deposit_account)
+      # nil returned means everything went well
+      ret = false if res != nil
+    end
+    ret
   end
 
   def dwolla_transfer(amount)

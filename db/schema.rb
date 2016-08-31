@@ -11,27 +11,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160822231707) do
+ActiveRecord::Schema.define(version: 20160831223257) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
   enable_extension "uuid-ossp"
 
   create_table "accounts", id: :uuid, default: "uuid_generate_v4()", force: :cascade do |t|
-    t.datetime "created_at",                                  null: false
-    t.datetime "updated_at",                                  null: false
+    t.datetime "created_at",                        null: false
+    t.datetime "updated_at",                        null: false
     t.string   "plaid_id"
     t.string   "name"
     t.string   "institution"
     t.decimal  "available_balance"
     t.decimal  "current_balance"
-    t.integer  "account_num",       limit: 8
-    t.integer  "routing_num"
     t.string   "account_type"
     t.string   "account_subtype"
     t.uuid     "user_id"
     t.uuid     "bank_id"
-    t.boolean  "tracking",                    default: false
+    t.boolean  "tracking",          default: false
+    t.string   "dwolla_id"
+    t.string   "account_num"
+    t.string   "routing_num"
   end
 
   add_index "accounts", ["bank_id"], name: "index_accounts_on_bank_id", using: :btree
