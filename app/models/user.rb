@@ -94,39 +94,44 @@ class User < ActiveRecord::Base
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
       # nil returned means everything went well
-      ret = false if res != nil
+      unless res.nil?
+        logger.warn res
+        p res
+        ret = false
+      end
     end
     if self.deposit_account
       res = DwollaHelper.add_funding_source(self, self.deposit_account)
       # nil returned means everything went well
-      ret = false if res != nil
+      unless res.nil?
+        logger.warn res
+        p res
+        ret = false
+      end
     end
     ret
   end
 
   def dwolla_transfer(amount)
-    # TODO: Implement
-    # begin
-    #   ret = DwollaHelper.transfer_money(customer_id, funding_source, amount)
-    # rescue DwollaV2::NotFoundError => e
-    #   p "NOT FOUND"
-    #   p e
-    #   # => #<DwollaV2::NotFoundError status=404 headers={"server"=>"cloudflare-nginx", "date"=>"Mon, 28 Mar 2016 15:35:32 GMT", "content-type"=>"application/vnd.dwolla.v1.hal+json; profile=\"http://nocarrier.co.uk/profiles/vnd.error/\"; charset=UTF-8", "content-length"=>"69", "connection"=>"close", "set-cookie"=>"__cfduid=da1478bfdf3e56275cd8a6a741866ccce1459179332; expires=Tue, 28-Mar-17 15:35:32 GMT; path=/; domain=.dwolla.com; HttpOnly", "access-control-allow-origin"=>"*", "x-request-id"=>"667fca74-b53d-43db-bddd-50426a011881", "cf-ray"=>"28ac270abca64207-MSP"} {"code"=>"NotFound", "message"=>"The requested resource was not found."}>
-    #
-    #   p e.status
-    #   # => 404
-    #
-    #   p e.headers
-    #   # => {"server"=>"cloudflare-nginx", "date"=>"Mon, 28 Mar 2016 15:35:32 GMT", "content-type"=>"application/vnd.dwolla.v1.hal+json; profile=\"http://nocarrier.co.uk/profiles/vnd.error/\"; charset=UTF-8", "content-length"=>"69", "connection"=>"close", "set-cookie"=>"__cfduid=da1478bfdf3e56275cd8a6a741866ccce1459179332; expires=Tue, 28-Mar-17 15:35:32 GMT; path=/; domain=.dwolla.com; HttpOnly", "access-control-allow-origin"=>"*", "x-request-id"=>"667fca74-b53d-43db-bddd-50426a011881", "cf-ray"=>"28ac270abca64207-MSP"}
-    #
-    #   p e.code
-    #   # => "NotFound"
-    #   return head status: :unprocessable_entity
-    # rescue DwollaV2::Error => e
-    #   p "ERROR"
-    #   p e
-    #   return head status: :unprocessable_entity
+    unless self.source_account && self.source_account.dwolla_id &&
+           self.deposit_account && self.deposit_account.dwolla_id
+
+      return
+    end
+
+    # TODO:
+    # res = DwollaHelper.transfer(self.source_account,
+    #                             self.deposit_account,
+    #                             amount)
+
+    # res should be nil
+    # TODO process res
+    # if res == nil
+    self.fund.deposit!(amount)
+    self.yearly_fund().deposit!(amount)
     # end
+
+    true
   end
 
   # Convenience method for getting the yearly_fund matching the current year

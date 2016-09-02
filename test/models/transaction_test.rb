@@ -103,16 +103,8 @@ class TransactionTest < ActiveSupport::TestCase
     transaction.vice = vice
     transaction.user = user
     transaction.invested = false
-    transaction.archived = true
     transaction.save!
 
-    transaction.invest!(1.23)
-    transaction.reload
-    assert_not transaction.invested, 'Invested archived Transaction'
-    assert_equal transaction.amount_invested, 0
-
-    transaction.archived = false
-    transaction.save!
     transaction.invest!(4.56)
     transaction.reload
     assert transaction.invested, 'Couldn\'t invest Transaction'

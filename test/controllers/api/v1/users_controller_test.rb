@@ -773,13 +773,21 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     @request.headers['Authorization'] = @user.token
 
-    # Get transactions (essentially copy-paste from above)
+    # Auth with Dwolla to test movement of money
+    post :dwolla, ssn: '123-45-6789'
+    assert_response :ok
+    # Get transactions
     assert_equal @user.transactions.size, 0
-    get :account_connect, username: 'plaid_test', password: 'plaid_good',
-                          type: 'wells'
+    get(:account_connect, username: 'plaid_test',
+                          password: 'plaid_good',
+                          type: 'wells') # No MFA
     assert_response :success
     @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    account_ids = @user.accounts.map(&:id)
+    # Auth source/deposit Accounts with Dwolla
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1]
+    assert_response :success
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
@@ -822,13 +830,21 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     @request.headers['Authorization'] = @user.token
 
-    # Get transactions (essentially copy-paste from above)
+    # Auth with Dwolla to test movement of money
+    post :dwolla, ssn: '123-45-6789'
+    assert_response :ok
+    # Get transactions
     assert_equal @user.transactions.size, 0
-    get :account_connect, username: 'plaid_test', password: 'plaid_good',
-                          type: 'wells'
+    get(:account_connect, username: 'plaid_test',
+                          password: 'plaid_good',
+                          type: 'wells') # No MFA
     assert_response :success
     @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
+    account_ids = @user.accounts.map(&:id)
+    # Auth source/deposit Accounts with Dwolla
+    put :update_accounts, source: account_ids[0], deposit: account_ids[1]
+    assert_response :success
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
@@ -841,11 +857,19 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Deduct
     assert_equal @user.fund.amount_invested, 0.00
     assert_equal @user.yearly_fund().amount_invested, 0.00
+    now = Date.current
+    @user.transactions.each do |tx|
+      # Force date to be today to avoid accidentally being aggregated
+      tx.date = now
+      tx.save!
+    end
     post :dev_deduct
     assert_response :success
+
+    # Verify deduction
     @user.reload
-    last_month = Date.current.beginning_of_month - 1.month
     amount = 0.00 # Keep track of total amount invested
+    last_month = Date.current.beginning_of_month - 1.month
     @user.transactions.each do |tx|
       assert_equal tx.invested, true
       amount += tx.amount_invested
@@ -857,6 +881,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal @user.fund.amount_invested, amount
     assert_equal @user.yearly_fund().amount_invested, amount
 
+    # Aggregate
     assert_equal @user.agexes.size, 0
     post :dev_aggregate
     assert_response :success

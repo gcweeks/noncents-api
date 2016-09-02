@@ -33,13 +33,8 @@ class Transaction < ActiveRecord::Base
   end
 
   def invest!(amount)
-    if self.archived
-      logger.warn "Tried to invest an archived transaction!"
-      return
-    end
     self.invested = true
     self.amount_invested += amount
-    self.user.dwolla_transfer(amount)
     save!
   end
 

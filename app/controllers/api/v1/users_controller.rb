@@ -458,24 +458,72 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def dev_deduct
+    current_month = Date.current.beginning_of_month
+    
+    # Step 1: Go through every Transaction and get a list of all
+    # Transactions that are to be invested, as well as the total dollar
+    # amount to be invested this week. At the same time, aggregate all old
+    # Transactions into Agexes.
+    amount_to_invest = 0.0
+    transactions_to_invest = []
     @authed_user.transactions.each do |transaction|
-      next if transaction.invested
-      if transaction.archived || transaction.backed_out
-        # Archive in order to delete the Transaction if it is too old
+
+      if transaction.archived
+        # Re-archive in order to delete the Transaction if it is too old
         transaction.archive!
         next
       end
+
+      # Archive backed_out Transactions
+      if transaction.backed_out
+        transaction.archive!
+        next
+      end
+
+      # Deduct Transactions
+      unless transaction.invested
+        amount = transaction.amount * @authed_user.invest_percent / 100.0
+        amount = amount.round(2)
+        amount_to_invest += amount
+        transactions_to_invest.push transaction
+      end
+
+      # Don't aggregate/delete if Transaction is still of current month
+      month = transaction.date.beginning_of_month
+      next unless month < current_month
+
+      # Aggregate old Transactions
+      agexes = @authed_user.agexes.where(month: month)
+      agex = agexes.find_by(vice_id: transaction.vice.id)
+      unless agex
+        agex = @authed_user.agexes.new
+        agex.vice = transaction.vice
+        agex.month = month
+      end
+      agex.amount += transaction.amount_invested
+      agex.save!
+
+      # Archive all old Transactions, even if they're included in
+      # transactions_to_invest.
+      transaction.archive!
+    end
+
+    # Step 2: Deduct the total amount from the User's source Account into
+    # their Deposit account. If they do not have source/deposit Accounts
+    # specified or set up with Dwolla, this call will do nothing.
+    @authed_user.dwolla_transfer(amount_to_invest)
+
+    # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
+    # Note, we won't check whether or not they are archived here because
+    # they may have been archived by Step 1. We still want to modify their
+    # 'invested' state. Step 1 will check if the Transaction was archived
+    # before placing it in the transactions_to_invest array.
+    transactions_to_invest.each do |transaction|
       amount = transaction.amount * @authed_user.invest_percent / 100.0
       amount = amount.round(2)
-      # A bit confusing: in this context, 'Fund.transaction' refers to the
-      # fact that an all-or-nothing database operation ('transaction') is
-      # taking place, not to the identically-named Transaction model.
-      Fund.transaction do
-        @authed_user.fund.deposit!(amount)
-        @authed_user.yearly_fund().deposit!(amount)
-        transaction.invest!(amount)
-      end
+      transaction.invest!(amount)
     end
+
     render json: @authed_user, status: :ok
   end
 

@@ -89,6 +89,12 @@ class Api::V1::ApiController < ApplicationController
       logger.info 'CRON: Starting Transaction processing for ' + user.fname +
         ' ' + user.lname + ' (' + user.id.to_s + ')'
 
+      # Step 1: Go through every Transaction and get a list of all
+      # Transactions that are to be invested, as well as the total dollar
+      # amount to be invested this week. At the same time, aggregate all old
+      # Transactions into Agexes.
+      amount_to_invest = 0.0
+      transactions_to_invest = []
       user.transactions.each do |transaction|
         logger.info 'CRON: Processing Transaction ' + transaction.id.to_s
 
@@ -113,15 +119,9 @@ class Api::V1::ApiController < ApplicationController
         else
           amount = transaction.amount * user.invest_percent / 100.0
           amount = amount.round(2)
-          # A bit confusing: in this context, 'Fund.transaction' refers to the
-          # fact that an all-or-nothing database operation ('transaction') is
-          # taking place, not to the identically-named Transaction model.
-          Fund.transaction do
-            user.fund.deposit!(amount)
-            user.yearly_fund().deposit!(amount)
-            transaction.invest!(amount)
-          end
-          logger.info 'CRON: Successfully deducted ' + amount.to_s
+          amount_to_invest += amount
+          transactions_to_invest.push transaction
+          logger.info 'CRON: Adding ' + amount.to_s + ' to deduct total'
         end
 
         # Don't aggregate/delete if Transaction is still of current month
@@ -145,12 +145,29 @@ class Api::V1::ApiController < ApplicationController
         agex.amount += transaction.amount_invested
         agex.save!
 
-        # Archive all old transactions
+        # Archive all old Transactions, even if they're included in
+        # transactions_to_invest.
         transaction.archive!
         logger.info 'CRON: Successfully aggregated/deleted Transaction into ' +
          agex.id.to_s + ' Agex'
       end
-    end
+
+      # Step 2: Deduct the total amount from the User's source Account into
+      # their Deposit account. If they do not have source/deposit Accounts
+      # specified or set up with Dwolla, this call will do nothing.
+      user.dwolla_transfer(amount_to_invest)
+
+      # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
+      # Note, we won't check whether or not they are archived here because
+      # they may have been archived by Step 1. We still want to modify their
+      # 'invested' state. Step 1 will check if the Transaction was archived
+      # before placing it in the transactions_to_invest array.
+      transactions_to_invest.each do |transaction|
+        amount = transaction.amount * user.invest_percent / 100.0
+        amount = amount.round(2)
+        transaction.invest!(amount)
+      end
+    end # User.all.each do |user|
 
     logger.info DateTime.current.strftime(
       "CRON: Finished weekly_deduct_cron at %Y-%m-%d %H:%M:%S::%L %z")

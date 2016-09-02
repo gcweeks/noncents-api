@@ -78,42 +78,53 @@ module DwollaHelper
     })
 
     funding_source = res.headers['location']
-    # TODO: Check for prod URL as well
-    if funding_source.slice! 'https://api-uat.dwolla.com/funding-sources/'
-       account.dwolla_id = funding_source
-       account.save!
-       return nil
+    # TODO: Check prod URL as well
+    unless funding_source &&
+           funding_source.slice!('https://api-uat.dwolla.com/funding-sources/')
+
+      funding_source = res['message']
+      if funding_source
+        unless funding_source.slice!('Bank already exists: id=')
+          funding_source = nil
+        end
+      end
     end
-    logger.warn res
+
+    if funding_source
+      account.dwolla_id = funding_source
+      account.save!
+      return nil
+    end
+
     res
   end
 
-  def self.transfer_money(customer_id, funding_source, amount)
-    self.post("transfers", {
+  def self.transfer(source_account, deposit_account, amount)
+    p "Depositing " + amount.to_s
+    p "Source: " + source_account.dwolla_id
+    p "Deposit: " + deposit_account.dwolla_id
+    res = self.post("transfers", {
       _links: {
-        destination: {
-          href: 'https://api-uat.dwolla.com/customers/' + customer_id
-          # TODO
-          #href: 'https://api.dwolla.com/customers/' + customer_id
-        },
+        # TODO Production URL as well
         source: {
-          href: 'https://api-uat.dwolla.com/funding-sources/' + funding_source
-          # TODO
-          #href: 'https://api.dwolla.com/funding-sources/' + funding_source
+          href: 'https://api-uat.dwolla.com/funding-sources/' +
+            source_account.dwolla_id
+        },
+        destination: {
+          href: 'https://api-uat.dwolla.com/funding-sources/' +
+            deposit_account.dwolla_id
         }
       },
       amount: {
         currency: 'USD',
         value: amount.to_s
-      },
-      metadata: {
-        foo: 'bar',
-        baz: 'boo'
       }
-    }#, {
-    #  'Idempotency-Key': user.id.to_s
-    #}
+    }, {
+      'Idempotency-Key': source_account.id.to_s + DateTime.current.to_s
+    }
     )
+    p res
+    return nil
   end
 
   private
