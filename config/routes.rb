@@ -31,7 +31,6 @@ Rails.application.routes.draw do
           get    'account_mfa'              => 'users#account_mfa'
           put    'accounts'                 => 'users#update_accounts'
           delete 'accounts'                 => 'users#remove_accounts'
-          put    'remove_accounts'          => 'users#remove_accounts_old' # TODO Deprecated
           post   'refresh_transactions'     => 'users#refresh_transactions'
           post   'register_push_token'      => 'users#register_push_token'
           post   'dwolla'                   => 'users#dwolla'

@@ -255,34 +255,6 @@ class Api::V1::UsersController < ApplicationController
     render json: @authed_user, status: :ok
   end
 
-  # TODO Deprecated
-  # PUT users/me/remove_accounts
-  def remove_accounts_old
-    unless params[:accounts]
-      errors = { accounts: ['are required'] }
-      return render json: errors, status: :bad_request
-    end
-    unless params[:accounts].is_a?(Array)
-      errors = { accounts: ['are in incorrect format'] }
-      return render json: errors, status: :bad_request
-    end
-    account_array = []
-    params[:accounts].each do |account_id|
-      account = Account.find_by(id: account_id)
-      return head :not_found unless account
-      unless @authed_user.accounts.map(&:id).include? account.id
-        return head :unauthorized
-      end
-      account_array.push account
-    end
-    account_array.each(&:destroy)
-    # Refresh User
-    @authed_user = User.find_by(id: @authed_user.id)
-    # Add remaining accounts to Dwolla
-    @authed_user.dwolla_add_funding_source
-    render json: @authed_user, status: :ok
-  end
-
   def refresh_transactions
     @authed_user.refresh_transactions(true)
     @authed_user.reload
