@@ -302,23 +302,42 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def dwolla
+    # Validate payload
+    errors = {}
     unless params[:ssn]
-      errors = { ssn: ['is required'] }
-      return render json: errors, status: :bad_request
+      errors[:ssn] = ['is required']
+    end
+    phone = params[:phone]
+    if phone.blank?
+      errors[:phone] = ['is required']
+    elsif phone.length != 10 || ("%010d" % phone.to_i.to_s != phone)
+      # Check if number is exactly 10 digits (Convert to int then back to
+      # string, then make sure result is the same. Pad with zeros in case phone
+      # starts with zero, as this would drop out in integer conversion.)
+      errors[:phone] = ['must be exactly 10 digits']
     end
     addr = @authed_user.address
     unless addr
-      errors = { address: ['is required'] }
-      return render json: errors, status: :bad_request unless params[:address]
-      addr = Address.new
+      if params[:address]
+        addr = Address.new
+      else
+        errors[:address] = ['is required']
+      end
+    end
+    unless errors.blank?
+      return render json: errors, status: :bad_request
     end
     if params[:address]
       unless addr.update(address_params)
         return render json: addr.errors, status: :unprocessable_entity
       end
     end
+
+    # Set User's Address and phone, used in User.dwolla_create
     @authed_user.address = addr
+    @authed_user.phone = phone
     @authed_user.save!
+
     if @authed_user.dwolla_create(params[:ssn], request.remote_ip)
       return head status: :ok
     end
@@ -459,7 +478,7 @@ class Api::V1::UsersController < ApplicationController
 
   def dev_deduct
     current_month = Date.current.beginning_of_month
-    
+
     # Step 1: Go through every Transaction and get a list of all
     # Transactions that are to be invested, as well as the total dollar
     # amount to be invested this week. At the same time, aggregate all old

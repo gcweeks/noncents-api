@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160831223257) do
+ActiveRecord::Schema.define(version: 20160906235829) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -133,6 +133,7 @@ ActiveRecord::Schema.define(version: 20160831223257) do
     t.string   "fcm_tokens",         default: [],               array: true
     t.uuid     "source_account_id"
     t.uuid     "deposit_account_id"
+    t.string   "phone"
   end
 
   add_index "users", ["deposit_account_id"], name: "index_users_on_deposit_account_id", using: :btree

@@ -8,7 +8,6 @@ module DwollaHelper
     config.environment = :sandbox
     # TODO
     # config.environment = :production
-    # Also change instances of api-uat
   end
 
   @@account_token = $dwolla.tokens.new(
@@ -33,6 +32,7 @@ module DwollaHelper
       firstName: user.fname,
       lastName: user.lname,
       email: user.email,
+      phone: user.phone,
       ipAddress: ip,
       type: 'personal',
       address1: user.address.line1,
@@ -61,70 +61,47 @@ module DwollaHelper
     ret['_embedded']
   end
 
-  # TODO Unused. Necessary?
-  def self.get_funding_sources(user)
+  def self.get_funding_source(user)
     self.get('customers/' + user.dwolla_id + '/funding-sources')
   end
 
   def self.add_funding_source(user, account)
-    return nil if account.dwolla_id != nil
-    res = self.post('customers/' + user.dwolla_id + '/funding-sources', {
+    self.post('customers/' + user.dwolla_id + '/funding-sources', {
       routingNumber: account.routing_num,
       accountNumber: account.account_num,
-      type: account.account_subtype,
+      type: 'checking', # TODO
       name: account.name
     }, {
-      'Idempotency-Key': user.dwolla_id + account.account_num.to_s
+      'Idempotency-Key': user.dwolla_id + account.account_num
     })
-
-    funding_source = res.headers['location']
-    # TODO: Check prod URL as well
-    unless funding_source &&
-           funding_source.slice!('https://api-uat.dwolla.com/funding-sources/')
-
-      funding_source = res['message']
-      if funding_source
-        unless funding_source.slice!('Bank already exists: id=')
-          funding_source = nil
-        end
-      end
-    end
-
-    if funding_source
-      account.dwolla_id = funding_source
-      account.save!
-      return nil
-    end
-
-    res
   end
 
-  def self.transfer(source_account, deposit_account, amount)
-    p "Depositing " + amount.to_s
-    p "Source: " + source_account.dwolla_id
-    p "Deposit: " + deposit_account.dwolla_id
-    res = self.post("transfers", {
+  def self.transfer_money(customer_id, funding_source, amount)
+    self.post("transfers", {
       _links: {
-        # TODO Production URL as well
-        source: {
-          href: 'https://api-uat.dwolla.com/funding-sources/' +
-            source_account.dwolla_id
-        },
         destination: {
-          href: 'https://api-uat.dwolla.com/funding-sources/' +
-            deposit_account.dwolla_id
+          href: 'https://api-uat.dwolla.com/customers/' + customer_id
+          # TODO
+          #href: 'https://api.dwolla.com/customers/' + customer_id
+        },
+        source: {
+          href: 'https://api-uat.dwolla.com/funding-sources/' + funding_source
+          # TODO
+          #href: 'https://api.dwolla.com/funding-sources/' + funding_source
         }
       },
       amount: {
         currency: 'USD',
         value: amount.to_s
+      },
+      metadata: {
+        foo: 'bar',
+        baz: 'boo'
       }
-    }, {
-      'Idempotency-Key': source_account.id.to_s + DateTime.current.to_s
-    }
+    }#, {
+    #  'Idempotency-Key': user.id.to_s
+    #}
     )
-    p res
-    return nil
   end
 
   private

@@ -90,6 +90,9 @@ class User < ActiveRecord::Base
 
   # Add funding source and destination to Dwolla
   def dwolla_add_funding_sources
+    # TODO:
+    return true
+    
     ret = true
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
@@ -113,13 +116,14 @@ class User < ActiveRecord::Base
   end
 
   def dwolla_transfer(amount)
-    unless self.source_account && self.source_account.dwolla_id &&
-           self.deposit_account && self.deposit_account.dwolla_id
-
-      return
-    end
-
     # TODO:
+
+    # unless self.source_account && self.source_account.dwolla_id &&
+    #        self.deposit_account && self.deposit_account.dwolla_id
+    #
+    #   return
+    # end
+    #
     # res = DwollaHelper.transfer(self.source_account,
     #                             self.deposit_account,
     #                             amount)

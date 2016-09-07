@@ -462,7 +462,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     put :update_accounts, source: account_ids[0], deposit: account_ids[1],
       tracking: [account_ids[0], account_ids[1]]
     assert_response :bad_request
-    post :dwolla, ssn: '123-45-6789'
+    post :dwolla, ssn: '123-45-6789', phone: @user.phone
     assert_response :ok
 
     # Set Accounts
@@ -694,14 +694,26 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
 
     @request.headers['Authorization'] = @user.token
 
-    # Requires ssn
+    # Requires ssn and phone
     post :dwolla
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['ssn'], ['is required']
+    assert_equal res['phone'], ['is required']
 
-    post :dwolla, ssn: '123-45-6789'
-    assert_response :ok
+    # Phone must be 10 digits
+    post :dwolla, ssn: '123-45-6789', phone: '12345678901'
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['phone'], ['must be exactly 10 digits']
+    post :dwolla, ssn: '123-45-6789', phone: '123456789'
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['phone'], ['must be exactly 10 digits']
+    post :dwolla, ssn: '123-45-6789', phone: '1-23456789'
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['phone'], ['must be exactly 10 digits']
 
     # No address
     # Store address for later
@@ -713,13 +725,13 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
       zip: '@user.address.zip'
     }
     @user.address.delete
-    post :dwolla, ssn: '123-45-6789'
+    post :dwolla, ssn: '123-45-6789', phone: @user.phone
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['address'], ['is required']
 
     # Address in payload
-    post :dwolla, address: address, ssn: '123-45-6789'
+    post :dwolla, address: address, ssn: '123-45-6789', phone: @user.phone
     assert_response :ok
     @user.reload
     assert_equal address[:line1], @user.address.line1
@@ -774,7 +786,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
 
     # Auth with Dwolla to test movement of money
-    post :dwolla, ssn: '123-45-6789'
+    post :dwolla, ssn: '123-45-6789', phone: @user.phone
     assert_response :ok
     # Get transactions
     assert_equal @user.transactions.size, 0
@@ -831,7 +843,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
 
     # Auth with Dwolla to test movement of money
-    post :dwolla, ssn: '123-45-6789'
+    post :dwolla, ssn: '123-45-6789', phone: @user.phone
     assert_response :ok
     # Get transactions
     assert_equal @user.transactions.size, 0
