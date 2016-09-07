@@ -45,8 +45,15 @@ module DwollaHelper
     }, {
       'Idempotency-Key': user.id.to_s
     })
+
+    if ret.class == DwollaV2::Response
+      ret = ret.headers['location']
+      return nil unless ret.slice! 'https://api-uat.dwolla.com/customers/'
+      return ret
+    end
+
     return ret unless ret['_embedded'] # Error, Dwolla should provide this key
-    return ret['_embedded'] unless ret['_embedded']['errors']
+    return ret['_embedded']['id'] unless ret['_embedded']['errors']
 
     # Error
     if ret['_embedded']['errors'][0]['code'] == 'Duplicate'
@@ -54,7 +61,7 @@ module DwollaHelper
       if existing['_embedded']['customers'].size > 0
         existing = existing['_embedded']['customers'][0]
         existing.delete('_links')
-        return existing
+        return existing['id']
       end
     end
     # No existing customer, forward the original error to the client

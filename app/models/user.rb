@@ -91,16 +91,14 @@ class User < ActiveRecord::Base
   def dwolla_create(ssn, ip)
     return false unless self.address && ssn && ip
     res = DwollaHelper.add_customer(self, ssn, ip)
-    if res
-      if res['id']
-        self.dwolla_id = res['id']
-        self.save!
-        return true
-      end
-      logger.warn res
+    if res.nil? || res.class != String
+      logger.warn 'Error in dwolla_create'
+      return false
     end
-    logger.warn 'Error in dwolla_create'
-    false
+
+    self.dwolla_id = res
+    self.save!
+    true
   end
 
   # Add funding source and destination to Dwolla
