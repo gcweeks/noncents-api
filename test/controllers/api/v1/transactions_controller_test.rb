@@ -31,7 +31,7 @@ class Api::V1::TransactionsControllerTest < ActionController::TestCase
 
     # Try backing out of a transaction that doesn't belong to @user
     new_user = User.new(fname: 'Different', lname: 'Person', dob: '1990-01-20',
-                        number: '+15555552017', invest_percent: 10,
+                        phone: '5555552017', invest_percent: 10,
                         password: 'Ca5hM0n3y', email: 'different@email.com')
     new_user.generate_token
     new_user.create_fund

@@ -41,6 +41,21 @@ class User < ActiveRecord::Base
   validates :token, presence: true
   validates :fund, presence: true
   validates :goal, inclusion: 1..5500
+  validate :valid_phone?
+
+  def valid_phone?
+    if self.phone
+      phone = self.phone
+      # Check if number is exactly 10 digits (Convert to int then back to
+      # string, then make sure result is the same. Pad with zeros in case phone
+      # starts with zero, as this would drop out in integer conversion.)
+      if phone.length != 10 || ("%010d" % phone.to_i.to_s != phone)
+        errors.add(:phone, 'must be exactly 10 digits')
+      end
+      return
+    end
+    errors.add(:phone, 'is required')
+  end
 
   def as_json(options = {})
     json = super({
@@ -92,7 +107,7 @@ class User < ActiveRecord::Base
   def dwolla_add_funding_sources
     # TODO:
     return true
-    
+
     ret = true
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)

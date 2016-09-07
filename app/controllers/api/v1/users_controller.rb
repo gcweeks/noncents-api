@@ -307,15 +307,6 @@ class Api::V1::UsersController < ApplicationController
     unless params[:ssn]
       errors[:ssn] = ['is required']
     end
-    phone = params[:phone]
-    if phone.blank?
-      errors[:phone] = ['is required']
-    elsif phone.length != 10 || ("%010d" % phone.to_i.to_s != phone)
-      # Check if number is exactly 10 digits (Convert to int then back to
-      # string, then make sure result is the same. Pad with zeros in case phone
-      # starts with zero, as this would drop out in integer conversion.)
-      errors[:phone] = ['must be exactly 10 digits']
-    end
     addr = @authed_user.address
     unless addr
       if params[:address]
@@ -333,9 +324,8 @@ class Api::V1::UsersController < ApplicationController
       end
     end
 
-    # Set User's Address and phone, used in User.dwolla_create
+    # Set User's Address used in User.dwolla_create
     @authed_user.address = addr
-    @authed_user.phone = phone
     @authed_user.save!
 
     if @authed_user.dwolla_create(params[:ssn], request.remote_ip)
@@ -579,13 +569,13 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def user_params
-    params.require(:user).permit(:fname, :lname, :password, :number, :dob,
+    params.require(:user).permit(:fname, :lname, :password, :phone, :dob,
                                  :email, :invest_percent, :goal)
   end
 
   def user_update_params
     # No :email or :dob
-    params.require(:user).permit(:fname, :lname, :password, :number,
+    params.require(:user).permit(:fname, :lname, :password, :phone,
                                  :invest_percent, :goal)
   end
 

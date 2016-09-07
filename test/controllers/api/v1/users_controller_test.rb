@@ -17,7 +17,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Invalid email
@@ -26,7 +28,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Existing email
@@ -35,7 +39,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Missing password
@@ -43,7 +49,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Invalid password
@@ -52,7 +60,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Missing fname
@@ -60,7 +70,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           password: @user.password,
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Missing lname
@@ -68,7 +80,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           password: @user.password,
                           fname: @user.fname,
                           invest_percent: @user.invest_percent,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Invalid invest_percent
@@ -77,7 +91,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: -1,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Invalid invest_percent
@@ -86,7 +102,9 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           fname: @user.fname,
                           lname: @user.lname,
                           invest_percent: 101,
-                          dob: @user.dob
+                          dob: @user.dob,
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :unprocessable_entity
     # Missing dob
@@ -94,7 +112,19 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           password: @user.password,
                           fname: @user.fname,
                           lname: @user.lname,
-                          invest_percent: @user.invest_percent
+                          invest_percent: @user.invest_percent,
+                          goal: @user.goal,
+                          phone: @user.phone
+                        }
+    assert_response :unprocessable_entity
+    # Missing phone
+    post :create, user: { email: 'new@email.com',
+                          password: @user.password,
+                          fname: @user.fname,
+                          lname: @user.lname,
+                          invest_percent: @user.invest_percent,
+                          dob: @user.dob,
+                          goal: @user.goal
                         }
     assert_response :unprocessable_entity
     # Valid User
@@ -104,8 +134,8 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           lname: @user.lname,
                           invest_percent: @user.invest_percent,
                           dob: @user.dob,
-                          number: @user.number,
-                          goal: @user.goal
+                          goal: @user.goal,
+                          phone: @user.phone
                         }
     assert_response :success
 
@@ -114,11 +144,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_equal 24, res['token'].length
     assert_equal res['fname'], @user.fname
     assert_equal res['lname'], @user.lname
-    assert_equal res['number'], @user.number
     assert_equal res['email'], 'new@email.com'
     assert_equal res['dob'], @user.dob.to_s
     assert_equal res['invest_percent'], @user.invest_percent
     assert_equal res['goal'], @user.goal
+    assert_equal res['phone'], @user.phone
     assert_not_equal res['fund'], nil
   end
 
@@ -135,11 +165,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     res = JSON.parse(@response.body)
     assert_equal res['fname'], @user.fname
     assert_equal res['lname'], @user.lname
-    assert_equal res['number'], @user.number
     assert_equal res['email'], @user.email
     assert_equal res['dob'], @user.dob.to_s
     assert_equal res['invest_percent'], @user.invest_percent
     assert_equal res['goal'], @user.goal
+    assert_equal res['phone'], @user.phone
     assert_not_equal res['fund'], nil
     assert_equal res['address']['line1'], @user.address.line1
     assert_equal res['address']['line2'], @user.address.line2
@@ -156,24 +186,24 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
     fname = 'Test'
     lname = 'User'
-    number = '+5555555555'
     invest_percent = 15
     goal = 420
+    phone = '5555555555'
     put :update_me, user: {
       fname: fname,
       lname: lname,
-      number: number,
       invest_percent: invest_percent,
-      goal: goal
+      goal: goal,
+      phone: phone
     }
     assert_response :success
 
     res = JSON.parse(@response.body)
     assert_equal res['fname'], fname
     assert_equal res['lname'], lname
-    assert_equal res['number'], number
     assert_equal res['invest_percent'], invest_percent
     assert_equal res['goal'], goal
+    assert_equal res['phone'], phone
   end
 
   test 'should get yearly fund' do
@@ -462,7 +492,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     put :update_accounts, source: account_ids[0], deposit: account_ids[1],
       tracking: [account_ids[0], account_ids[1]]
     assert_response :bad_request
-    post :dwolla, ssn: '123-45-6789', phone: @user.phone
+    post :dwolla, ssn: '123-45-6789'
     assert_response :ok
 
     # Set Accounts
@@ -649,11 +679,11 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     user_2 = User.new
     user_2.fname = @user.fname
     user_2.lname = @user.lname
-    user_2.number = @user.number
     user_2.email = 'new@email.com'
     user_2.dob = @user.dob
     user_2.invest_percent = @user.invest_percent
     user_2.goal = @user.goal
+    user_2.phone = @user.phone
     user_2.password = 'Ca5hM0n3y'
     user_2.generate_token
     user_2.create_fund
@@ -699,21 +729,6 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['ssn'], ['is required']
-    assert_equal res['phone'], ['is required']
-
-    # Phone must be 10 digits
-    post :dwolla, ssn: '123-45-6789', phone: '12345678901'
-    assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_equal res['phone'], ['must be exactly 10 digits']
-    post :dwolla, ssn: '123-45-6789', phone: '123456789'
-    assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_equal res['phone'], ['must be exactly 10 digits']
-    post :dwolla, ssn: '123-45-6789', phone: '1-23456789'
-    assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_equal res['phone'], ['must be exactly 10 digits']
 
     # No address
     # Store address for later
@@ -725,13 +740,13 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
       zip: '@user.address.zip'
     }
     @user.address.delete
-    post :dwolla, ssn: '123-45-6789', phone: @user.phone
+    post :dwolla, ssn: '123-45-6789'
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['address'], ['is required']
 
     # Address in payload
-    post :dwolla, address: address, ssn: '123-45-6789', phone: @user.phone
+    post :dwolla, address: address, ssn: '123-45-6789'
     assert_response :ok
     @user.reload
     assert_equal address[:line1], @user.address.line1
@@ -786,7 +801,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
 
     # Auth with Dwolla to test movement of money
-    post :dwolla, ssn: '123-45-6789', phone: @user.phone
+    post :dwolla, ssn: '123-45-6789'
     assert_response :ok
     # Get transactions
     assert_equal @user.transactions.size, 0
@@ -843,7 +858,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @request.headers['Authorization'] = @user.token
 
     # Auth with Dwolla to test movement of money
-    post :dwolla, ssn: '123-45-6789', phone: @user.phone
+    post :dwolla, ssn: '123-45-6789'
     assert_response :ok
     # Get transactions
     assert_equal @user.transactions.size, 0
