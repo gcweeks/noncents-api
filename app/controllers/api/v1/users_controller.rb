@@ -569,7 +569,20 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def dev_notify
-    test_notification(@authed_user)
+    # Validate payload
+    errors = {}
+    unless params[:title]
+      errors[:title] = ['is required']
+    end
+    unless params[:body]
+      errors[:body] = ['is required']
+    end
+    unless errors.blank?
+      return render json: errors, status: :bad_request
+    end
+    unless test_notification(@authed_user, params[:title], params[:body])
+      return head status: :internal_server_error
+    end
     render json: { 'notification' => 'sent' }, status: :ok
   end
 

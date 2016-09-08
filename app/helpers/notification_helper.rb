@@ -37,27 +37,26 @@ module NotificationHelper
     true
   end
 
-  def test_notification(user)
+  def test_notification(user, title, body)
     return false unless user
 
-    # Populate Data
-    data = {
-      'hello' => 'world',
-      'fname' => user.fname,
-      'lname' => user.lname
+    # Populate Notification
+    notification = {
+      'title' => title,
+      'body' => body
     }
 
     # Send Notification
-    res = send_notification(topic, data)
+    res = send_notification(user, notification, nil)
     process_response(res)
     true
   end
 
   private
 
-  def send_notification(user, data)
+  def send_notification(user, notification, body)
     return true if Rails.env.test?
-    return false unless user && data
+    return false unless user
     init_notification_vars
     url = URI.parse('https://fcm.googleapis.com/fcm/send')
     http = Net::HTTP.new(url.host, url.port)
@@ -68,12 +67,14 @@ module NotificationHelper
 
     # Send notification to each of the User's registered devices
     ret = true
+    req.body = {
+      'priority' => 'high'
+    }
+    req.body['notification'] = notification if notification
+    req.body['body'] = body if body
     for token in user.fcm_tokens
-      req.body = {
-        'to' => token,
-        'data' => data
-      }.to_json
-      res = http.request(req)
+      req.body['to'] = token
+      res = http.request(req.to_json)
       ret &&= process_response(res)
     end
     ret
