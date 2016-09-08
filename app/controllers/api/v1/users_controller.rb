@@ -586,6 +586,12 @@ class Api::V1::UsersController < ApplicationController
     render json: { 'notification' => 'sent' }, status: :ok
   end
 
+  def dev_email
+    # UserMailer.welcome_email(@authed_user).deliver_later
+    UserMailer.welcome_email(@authed_user).deliver_now
+    head status: :ok
+  end
+
   private
 
   def user_params

@@ -35,6 +35,9 @@ gem 'bcrypt', '3.1.11'
 # Use Capistrano for deployment
 # gem 'capistrano-rails', group: :development
 
+# AWS SES
+gem "aws-ses", "~> 0.6.0", :require => 'aws/ses'
+
 # Rate limiting
 gem 'rack-throttle', '0.4.0'
 

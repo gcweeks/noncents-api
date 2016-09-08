@@ -40,6 +40,7 @@ Rails.application.routes.draw do
           post   'dev_deduct'               => 'users#dev_deduct'
           post   'dev_aggregate'            => 'users#dev_aggregate'
           post   'dev_notify'               => 'users#dev_notify'
+          post   'dev_email'                => 'users#dev_email'
         end
       end
       scope 'transactions' do
