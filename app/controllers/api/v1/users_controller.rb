@@ -306,6 +306,41 @@ class Api::V1::UsersController < ApplicationController
     head status: :internal_server_error
   end
 
+  def support
+    # Validate payload
+    unless params[:text]
+      errors = { text: ['is required'] }
+      return render json: errors, status: :bad_request
+    end
+    unless params[:text].length <= 1000
+      errors = { text: ['must be 1000 characters or less'] }
+      return render json: errors, status: :bad_request
+    end
+
+    # Build text
+    text = '```' + params[:text] + '```' + "\n"
+    text += 'FROM: ' + @authed_user.email
+
+    # Build HTTPS request
+    slack_key = ENV['SLACK_ROUTE']
+    url = URI.parse('https://hooks.slack.com/services/' + slack_key)
+    http = Net::HTTP.new(url.host, url.port)
+    http.use_ssl = true
+    req = Net::HTTP::Post.new(url.to_s)
+    req['Content-Type'] = 'application/json'
+    req.body = {
+      'text' => text
+    }.to_json
+
+    # Send Slack message
+    res = http.request(req)
+
+    # TODO: Process response
+    logger.info res
+
+    head status: :ok
+  end
+
   def dev_refresh_transactions
     # The method argument lets us take in older transactions for testing
     # purposes.
