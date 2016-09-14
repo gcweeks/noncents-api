@@ -65,19 +65,6 @@ class Api::V1::ApiController < ApplicationController
     render json: { 'email' => 'does not exist' }, status: :ok
   end
 
-  def twilio_callback
-    logger.info "From:"
-    logger.info params[:From]
-    logger.info "Body:"
-    logger.info params[:Body]
-    head :ok
-  end
-
-  def plaid_callback
-    logger.info params
-    head :ok
-  end
-
   def weekly_deduct_cron
     return head :not_found unless request.remote_ip == '127.0.0.1'
 
