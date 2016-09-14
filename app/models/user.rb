@@ -103,52 +103,62 @@ class User < ActiveRecord::Base
 
   # Add funding source and destination to Dwolla
   def dwolla_add_funding_sources
-    # TODO:
-    return true
+    # Delete old funding sources
+    ret = self.dwolla_remove_funding_sources
 
-    ret = true
+    # Add new funding sources
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
-      # nil returned means everything went well
-      unless res.nil?
-        logger.warn res
-        p res
+      if res.nil?
+        logger.warn "dwolla_add_funding_sources failed for source account"
         ret = false
       end
+      self.source_account.dwolla_id = res
+      self.source_account.save!
     end
     if self.deposit_account
       res = DwollaHelper.add_funding_source(self, self.deposit_account)
-      # nil returned means everything went well
-      unless res.nil?
-        logger.warn res
-        p res
+      if res.nil?
+        logger.warn "dwolla_add_funding_sources failed for deposit account"
         ret = false
       end
+      self.deposit_account.dwolla_id = res
+      self.deposit_account.save!
     end
     ret
   end
 
-  def dwolla_transfer(amount)
-    # TODO:
-
-    # unless self.source_account && self.source_account.dwolla_id &&
-    #        self.deposit_account && self.deposit_account.dwolla_id
-    #
-    #   return
-    # end
-    #
-    # res = DwollaHelper.transfer(self.source_account,
-    #                             self.deposit_account,
-    #                             amount)
-
-    # res should be nil
-    # TODO process res
-    # if res == nil
-    self.fund.deposit!(amount)
-    self.yearly_fund().deposit!(amount)
-    # end
-
+  # Remove all accounts except funding source and destination from Dwolla
+  def dwolla_remove_funding_sources
+    unless DwollaHelper.remove_funding_sources(self)
+      logger.warn "dwolla_remove_funding_sources failed"
+      return false
+    end
     true
+  end
+
+  def dwolla_transfer(amount)
+    # Must have source/deposit accounts
+    unless self.source_account && self.source_account.dwolla_id &&
+           self.deposit_account && self.deposit_account.dwolla_id
+
+      return false
+    end
+
+    # Get balance funding source
+    balance = DwollaHelper.get_balance_funding_source(self)
+    return false unless balance
+
+    if DwollaHelper.transfer_money(balance,
+                                   self.source_account.dwolla_id,
+                                   self.deposit_account.dwolla_id,
+                                   amount.to_s)
+
+      self.fund.deposit!(amount)
+      self.yearly_fund().deposit!(amount)
+      return true
+    end
+    false
   end
 
   # Convenience method for getting the yearly_fund matching the current year

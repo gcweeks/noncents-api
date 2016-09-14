@@ -803,6 +803,7 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     # Auth with Dwolla to test movement of money
     post :dwolla, ssn: '123-45-6789'
     assert_response :ok
+
     # Get transactions
     assert_equal @user.transactions.size, 0
     get(:account_connect, username: 'plaid_test',
@@ -810,11 +811,18 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
                           type: 'wells') # No MFA
     assert_response :success
     @user.reload
-    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
-    account_ids = @user.accounts.map(&:id)
+    account_0 = @user.accounts.find_by(name: 'Plaid Savings')
+    assert_not_equal account_0, nil
+    account_1 = @user.accounts.find_by(name: 'Plaid Checking')
+    assert_not_equal account_1, nil
     # Auth source/deposit Accounts with Dwolla
-    put :update_accounts, source: account_ids[0], deposit: account_ids[1]
+    put :update_accounts, source: account_0.id, deposit: account_1.id
     assert_response :success
+    account_0.reload
+    account_1.reload
+    # Ensure both accounts were authed with Dwolla
+    assert_not_equal account_0.dwolla_id, nil
+    assert_not_equal account_1.dwolla_id, nil
     vices = %w(CoffeeShops)
     post :set_vices, vices: vices
     assert_response :success
