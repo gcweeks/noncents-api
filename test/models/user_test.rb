@@ -79,12 +79,12 @@ class UserTest < ActiveSupport::TestCase
     assert user.save, "Couldn't save valid User"
     user.reload
 
-    # Optional number
-    number = user.number
-    user.number = nil
+    # Phone
+    phone = user.phone
+    user.phone = nil
+    assert_not user.save, "Saved User without phone"
+    user.phone = phone
     assert user.save, "Couldn't save valid User"
-    user.number = number
-    user.save!
     # user.reload
   end
 end

@@ -2,7 +2,16 @@ require 'test_helper'
 
 class AddressTest < ActiveSupport::TestCase
   test 'validations' do
+    user = users(:cashmoney)
+    user.generate_token
+    user.create_fund
+    user.password = 'Ca5hM0n3y'
+    user.save!
+
+    # User
     address = addresses(:test_address)
+    assert_not address.save, 'Saved Address without user'
+    address.user = user
     assert address.save, 'Couldn\'t save valid Address'
 
     # Line 1

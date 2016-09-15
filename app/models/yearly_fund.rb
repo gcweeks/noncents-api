@@ -1,4 +1,4 @@
-class YearlyFund < ActiveRecord::Base
+class YearlyFund < ApplicationRecord
   belongs_to :user
 
   # Validations

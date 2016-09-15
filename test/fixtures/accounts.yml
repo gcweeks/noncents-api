@@ -2,5 +2,7 @@ test_account:
   plaid_id: QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK
   name: 'Plaid Savings'
   institution: fake_institution
+  account_num: 9900009606
+  routing_num: 021000021
   account_type: depository
   account_subtype: checking

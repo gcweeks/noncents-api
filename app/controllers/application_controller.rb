@@ -1,8 +1,4 @@
-class ApplicationController < ActionController::Base
-  # Prevent CSRF attacks by raising an exception.
-  # For non-APIs, you may want to use :exception instead.
-  protect_from_forgery with: :null_session
-
+class ApplicationController < ActionController::API
   def init
     @SALT = ENV['SALT']
   end
@@ -12,13 +8,5 @@ class ApplicationController < ActionController::Base
     return head :unauthorized unless token
     @authed_user = User.find_by(token: token)
     return head :unauthorized unless @authed_user
-  end
-
-  def ssl_configured?
-    !Rails.env.development?
-  end
-
-  def staging_server?
-    ENV['DOMAIN'] != 'dimention.co'
   end
 end

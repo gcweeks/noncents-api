@@ -1,0 +1,2 @@
+class FcmToken < ApplicationRecord
+end

@@ -2,8 +2,24 @@ require 'test_helper'
 
 class AccountTest < ActiveSupport::TestCase
   test 'validations' do
+    user = users(:cashmoney)
+    user.generate_token
+    user.create_fund
+    user.password = 'Ca5hM0n3y'
+    user.save!
+    bank = banks(:test_bank)
+
+    # User
     account = accounts(:test_account)
+    account.bank = bank
+    assert_not account.save, 'Saved Account without user'
+    account.user = user
     assert account.save, 'Couldn\'t save valid Account'
+
+    # Bank
+    account.bank = nil
+    assert_not account.save, 'Saved Account without bank'
+    account.bank = bank
 
     # Plaid ID
     plaid_id = account.plaid_id

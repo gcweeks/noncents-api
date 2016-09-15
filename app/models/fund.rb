@@ -1,4 +1,4 @@
-class Fund < ActiveRecord::Base
+class Fund < ApplicationRecord
   belongs_to :user
 
   # Validations
