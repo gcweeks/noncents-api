@@ -140,7 +140,8 @@ class User < ActiveRecord::Base
   def dwolla_transfer(amount)
     # Must have source/deposit accounts
     unless self.source_account && self.source_account.dwolla_id &&
-           self.deposit_account && self.deposit_account.dwolla_id
+           self.deposit_account && self.deposit_account.dwolla_id &&
+           amount >= 1.00
 
       return false
     end
@@ -148,6 +149,7 @@ class User < ActiveRecord::Base
     # Get balance funding source
     balance = DwollaHelper.get_balance_funding_source(self)
     return false unless balance
+
 
     if DwollaHelper.transfer_money(balance,
                                    self.source_account.dwolla_id,
