@@ -5,7 +5,7 @@ module TwilioHelper
     @TWILIO_SID = ENV['TWILIO_SID']
     @TWILIO_TOKEN = ENV['TWILIO_TOKEN']
     @TWILIO_NUMBER = '+13237962054'
-    # @TWILIO_NUMBER = if ENV['DOMAIN'] == 'dimention.co'
+    # @TWILIO_NUMBER = if ENV['DOMAIN'] == 'api.noncents.co'
     #                    '+13237962054'
     #                  else
     #                    '+13237962054'

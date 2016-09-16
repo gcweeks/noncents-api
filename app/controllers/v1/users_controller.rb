@@ -93,36 +93,33 @@ class V1::UsersController < ApplicationController
       return render json: errors, status: :bad_request
     end
     # Get Plaid user
+    options = { login_only: true }
+    if ENV['RAILS_ENV'] == 'production'
+      domain = ENV['DOMAIN']
+      return head :internal_server_error if domain.blank?
+      options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+    end
     begin
       plaid_user = if params[:type] == 'bofa' || params[:type] == 'chase'
+                     options[:list] = true
                      Plaid::User.create(:connect,
                                         params[:type],
                                         params[:username],
                                         params[:password],
-                                        options: {
-                                          login_only: true,
-                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback',
-                                          list: true
-                                        })
+                                        options: options)
                    elsif params[:type] == 'usaa' && params[:pin]
                      Plaid::User.create(:connect,
                                         params[:type],
                                         params[:username],
                                         params[:password],
                                         pin: params[:pin],
-                                        options: {
-                                          login_only: true,
-                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
-                                        })
+                                        options: options)
                    else
                      Plaid::User.create(:connect,
                                         params[:type],
                                         params[:username],
                                         params[:password],
-                                        options: {
-                                          login_only: true,
-                                          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
-                                        })
+                                        options: options)
                    end
     rescue Plaid::PlaidError => e
       return handle_plaid_error(e)
@@ -143,10 +140,13 @@ class V1::UsersController < ApplicationController
     begin
       plaid_user = Plaid::User.load(:connect, params[:access_token])
       if !params[:answer].blank?
-        plaid_user.mfa_step(params[:answer], options: {
-          login_only: true,
-          webhook: 'https://app.dimention.co/api/v1/plaid_callback'
-        })
+        options = { login_only: true }
+        if ENV['RAILS_ENV'] == 'production'
+          domain = ENV['DOMAIN']
+          return head :internal_server_error if domain.blank?
+          options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+        end
+        plaid_user.mfa_step(params[:answer], options: options)
       elsif !params[:mask].blank?
         plaid_user.mfa_step(send_method: { mask: params[:mask] })
       elsif !params[:type].blank?

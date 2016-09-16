@@ -14,7 +14,7 @@ module ApiHelper
 
   def sms_send_confirmation(number)
     code = generate_confirmation(number, false)
-    body = 'Your confirmation code is ' + code + '.\nDimention.co'
+    body = 'Your confirmation code is ' + code + '.\nNoncents.co'
     send_twilio_sms(number, body)
   end
 
