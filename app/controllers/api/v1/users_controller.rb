@@ -526,20 +526,24 @@ class Api::V1::UsersController < ApplicationController
       transaction.archive!
     end
 
-    # Step 2: Deduct the total amount from the User's source Account into
-    # their Deposit account. If they do not have source/deposit Accounts
-    # specified or set up with Dwolla, this call will do nothing.
-    @authed_user.dwolla_transfer(amount_to_invest)
+    # Dwolla only lets us make transactions of a dollar or more.
+    if amount_to_invest > 1.00
+      # Step 2: Deduct the total amount from the User's source Account into
+      # their Deposit account. If they do not have source/deposit Accounts
+      # specified or set up with Dwolla, this call will do nothing. For now,
+      # we will ignore the return value of this method.
+      @authed_user.dwolla_transfer(amount_to_invest)
 
-    # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
-    # Note, we won't check whether or not they are archived here because
-    # they may have been archived by Step 1. We still want to modify their
-    # 'invested' state. Step 1 will check if the Transaction was archived
-    # before placing it in the transactions_to_invest array.
-    transactions_to_invest.each do |transaction|
-      amount = transaction.amount * @authed_user.invest_percent / 100.0
-      amount = amount.round(2)
-      transaction.invest!(amount)
+      # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
+      # Note, we won't check whether or not they are archived here because
+      # they may have been archived by Step 1. We still want to modify their
+      # 'invested' state. Step 1 will check if the Transaction was archived
+      # before placing it in the transactions_to_invest array.
+      transactions_to_invest.each do |transaction|
+        amount = transaction.amount * @authed_user.invest_percent / 100.0
+        amount = amount.round(2)
+        transaction.invest!(amount)
+      end
     end
 
     render json: @authed_user, status: :ok

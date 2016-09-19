@@ -837,6 +837,12 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     backed_out_tx.backed_out = true
     backed_out_tx.save!
 
+    # Beef up amount so we meet Dwolla $1 transfer threshold
+    @user.transactions.each do |tx|
+      tx.amount += 10.0
+      tx.save!
+    end
+
     # Deduct
     assert_equal @user.fund.amount_invested, 0
     assert_equal @user.yearly_fund().amount_invested, 0
@@ -856,6 +862,19 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     end
     assert_equal @user.fund.amount_invested, total_invested
     assert_equal @user.yearly_fund().amount_invested, total_invested
+
+    # Testing Dwolla:
+    # assert_equal DwollaTransaction.all.count, 1
+    # dwolla_tx = DwollaTransaction.all.first
+    #
+    # # Switch to the Webhook controller to fake a webhook
+    # old_controller = @controller
+    # @controller = WebhooksController.new
+    # post :dwolla, topic: 'customer_bank_transfer_completed',
+    #               resourceId: dwolla_tx.dwolla_id
+    # assert_response :success
+    # # Restore the original controller
+    # @controller = old_controller
   end
 
   test 'should aggregate funds dev' do
@@ -896,6 +915,8 @@ class Api::V1::UsersControllerTest < ActionController::TestCase
     @user.transactions.each do |tx|
       # Force date to be today to avoid accidentally being aggregated
       tx.date = now
+      # Beef up amount so we meet Dwolla $1 transfer threshold
+      tx.amount += 10.0
       tx.save!
     end
     post :dev_deduct

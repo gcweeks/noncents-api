@@ -234,7 +234,7 @@ module DwollaHelper
       },
       amount: {
         currency: 'USD',
-        value: '1.00'
+        value: amount
       }#,
       #metadata: {
       #  foo: 'bar',

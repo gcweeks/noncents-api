@@ -11,10 +11,13 @@ Rails.application.routes.draw do
       post '/'                        => 'api#request_post'
       get  'auth'                     => 'api#auth'
       get  'check_email'              => 'api#check_email'
-      get  'twilio_callback'          => 'api#twilio_callback'
-      get  'plaid_callback'           => 'api#plaid_callback'
       post 'weekly_deduct_cron'       => 'api#weekly_deduct_cron'
       post 'transaction_refresh_cron' => 'api#transaction_refresh_cron'
+      scope 'webhooks' do
+        get  'twilio' => 'webhooks#twilio'
+        get  'plaid'  => 'webhooks#plaid'
+        post 'dwolla' => 'webhooks#dwolla'
+      end
       scope 'version' do
         get 'ios' => 'api#version_ios'
       end
