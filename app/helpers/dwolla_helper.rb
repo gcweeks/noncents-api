@@ -154,8 +154,8 @@ module DwollaHelper
 
     # Gather Dwolla funding sources
     funding_source_ids = []
-    if ret['_embedded']['funding-sources']
-      ret['_embedded']['funding-sources'].each do |funding_source|
+    if res['_embedded']['funding-sources']
+      res['_embedded']['funding-sources'].each do |funding_source|
         # Only remove banks that have not already been removed
         if funding_source['removed'] != true && funding_source['type'] == 'bank'
 
