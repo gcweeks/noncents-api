@@ -16,7 +16,6 @@ class User < ApplicationRecord
   has_many :vices, through: :user_vices
   has_many :transactions
   has_many :agexes
-  has_many :authentication_events
   has_one  :fund
   has_one  :address
   has_many :yearly_funds

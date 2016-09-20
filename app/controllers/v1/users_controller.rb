@@ -595,7 +595,20 @@ class V1::UsersController < ApplicationController
 
   def dev_email
     # UserMailer.welcome_email(@authed_user).deliver_later
-    UserMailer.welcome_email(@authed_user).deliver_now
+    # UserMailer.welcome_email(@authed_user).deliver_now
+    # UserMailer.transfer_notification(@authed_user).deliver_now
+    # UserMailer.transfer_complete(@authed_user).deliver_now
+    # UserMailer.transfer_cancelled(@authed_user).deliver_now
+    # UserMailer.transfer_failed(@authed_user).deliver_now
+    # UserMailer.funding_added(@authed_user).deliver_now
+    # UserMailer.funding_removed(@authed_user).deliver_now
+    # UserMailer.welcome_need_info(@authed_user).deliver_now
+    # UserMailer.documents_needed(@authed_user).deliver_now
+    # UserMailer.documents_uploaded(@authed_user).deliver_now
+    # UserMailer.documents_approved(@authed_user).deliver_now
+    # UserMailer.documents_rejected(@authed_user).deliver_now
+    # UserMailer.verification(@authed_user).deliver_now
+    UserMailer.account_suspended(@authed_user).deliver_now
     head :ok
   end
 

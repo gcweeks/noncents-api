@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  <%= stylesheet_link_tag 'application' %>
+</head>
+
+<body style="background-color:#F9F9F9;padding-bottom:10px;padding-top:20px;">
+  <div style="text-align:center;">
+    <%= image_tag attachments['logo.png'].url, style:"height:26px; width:156px;" %>
+    <div class="spacer" style="height:20px"></div>
+  </div>
+
+  <div style="padding:20px;margin-right:4%;margin-left:4%;background-color:#FFFFFF;">
+    <h1 style="color:#28B3FE;">Document uploaded</h1>
+    <div style="font-size:16px;line-height:150%;">
+      <p>You've successfully uploaded a document. We'll send you another email letting you know if the document has been approved or rejected.</p>
+      <p>Questions or issues? Contact us at feedback@noncents.co.</p>
+      <p>Best,<br>noncents Team</p>
+    </div>
+    </div>
+    <%= image_tag attachments['divider.png'].url, style:"margin-left:4%;width:92%;margin-top:-25px;"%>
+    <div style="text-align:center;padding-top:10px;">
+      <p style="text-size:6px;color:#989EA6;line-height:150%;"><a href="http://noncents.co/">noncents</a><br>2660 South La Brea Ave • Los Angeles, CA • 90016</p>
+    </div>
+
+  </body>
+  </html>

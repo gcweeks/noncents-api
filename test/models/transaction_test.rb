@@ -103,7 +103,6 @@ class TransactionTest < ActiveSupport::TestCase
     transaction.vice = vice
     transaction.user = user
     transaction.invested = false
-    transaction.archived = false
     transaction.save!
 
     transaction.invest!(4.56)
