@@ -15,7 +15,7 @@ class Transaction < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      except: [:plaid_id, :vice_id]
+      except: [:plaid_id, :archived, :user_id, :vice_id]
     }.merge(options))
     json['vice'] = vice.name
     json

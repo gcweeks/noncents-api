@@ -12,6 +12,7 @@ class User < ApplicationRecord
 
   has_many :accounts
   has_many :agexes
+  has_many :auth_events
   has_many :banks
   has_many :dwolla_transactions
   has_many :fcm_tokens
@@ -58,20 +59,20 @@ class User < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      include: [:fund, :address],
       except:  [:token, :password_digest, :dwolla_id, :reset_password_token,
                 :reset_password_sent_at, :confirmation_token,
                 :confirmation_sent_at, :failed_attempts, :unlock_token,
                 :locked_at, :source_account_id, :deposit_account_id]
     }.merge(options))
-    # Custom handling
-    json['transactions'] = transactions.reject { |t| t.archived }
-    json['vices'] = vices.map(&:name)
-    # Wasn't calling as_json
+    # Manually call as_json
     json['accounts'] = accounts
+    json['address'] = address
     json['agexes'] = agexes
     json['deposit_account'] = deposit_account
+    json['fund'] = fund
     json['source_account'] = source_account
+    json['transactions'] = transactions.reject { |t| t.archived }
+    json['vices'] = vices.map(&:name)
     json['yearly_funds'] = yearly_funds
     json
   end

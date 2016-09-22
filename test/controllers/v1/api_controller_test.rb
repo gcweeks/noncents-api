@@ -26,11 +26,23 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should auth' do
+    assert_equal AuthEvent.all.count, 0
     get 'auth', params: { user: { email: @user.email, password: 'incorrect' } }
     assert_response :unauthorized
+    assert_equal AuthEvent.all.count, 1
+    auth_event_1 = AuthEvent.all[0]
+    assert_equal auth_event_1.user.id, @user.id
+    assert_equal auth_event_1.success, false
+    assert_equal auth_event_1.ip_address.to_s, @response.request.ip
     get 'auth', params: { user: { email: 'does@not.exist', password: 'incorrect' } }
     assert_response :not_found
+    assert_equal AuthEvent.all.count, 1
     get 'auth', params: { user: { email: @user.email, password: @user.password } }
+    assert_equal AuthEvent.all.count, 2
+    auth_event_2 = AuthEvent.all.where.not(id: auth_event_1.id).first
+    assert_equal auth_event_2.user.id, @user.id
+    assert_equal auth_event_2.success, true
+    assert_equal auth_event_2.ip_address.to_s, @response.request.ip
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal @user.token, res['token']

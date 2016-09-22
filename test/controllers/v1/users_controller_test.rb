@@ -223,7 +223,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['balance'].to_f, 0.00
     assert_equal res['amount_invested'].to_f, 0.00
     assert_equal res['year'], Date.current.year
-    assert_equal res['user_id'], @user.id
 
     # YearlyFund now created
     assert_equal @user.yearly_funds.count, 1

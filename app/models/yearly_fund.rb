@@ -7,6 +7,13 @@ class YearlyFund < ApplicationRecord
   validates :year, presence: true, numericality: { greater_than_or_equal_to: 2016 }
   validates :user, presence: true
 
+  def as_json(options = {})
+    json = super({
+      except: [:user_id]
+    }.merge(options))
+    json
+  end
+
   def deposit!(amount)
     return unless amount > 0.0
     self.amount_invested += amount

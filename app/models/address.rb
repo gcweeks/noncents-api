@@ -5,4 +5,11 @@ class Address < ApplicationRecord
   validates :city, presence: true
   validates :state, presence: true
   validates :zip, presence: true
+
+  def as_json(options = {})
+    json = super({
+      except: [:user_id]
+    }.merge(options))
+    json
+  end
 end

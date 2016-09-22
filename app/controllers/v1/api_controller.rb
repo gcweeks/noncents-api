@@ -44,11 +44,19 @@ class V1::ApiController < ApplicationController
     end
     user = User.find_by(email: params[:user][:email])
     return head :not_found unless user
+    # Log this authentication event
+    ip_addr = IPAddr.new(request.remote_ip)
+    auth_event = AuthEvent.new(ip_address: ip_addr)
+    auth_event.user = user
     user = user.try(:authenticate, params[:user][:password])
     unless user
+      auth_event.success = false
+      auth_event.save!
       errors = { password: ['is incorrect'] }
       return render json: errors, status: :unauthorized
     end
+    auth_event.success = true
+    auth_event.save!
     if user.token.blank?
       # Generate access token for User
       user.generate_token

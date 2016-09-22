@@ -10,7 +10,7 @@ class Agex < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      except: [:vice_id]
+      except: [:user_id, :vice_id]
     }.merge(options))
     json['vice'] = vice.name
     json
