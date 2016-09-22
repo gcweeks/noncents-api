@@ -11,14 +11,16 @@ class User < ApplicationRecord
   /x
 
   has_many :accounts
+  has_many :agexes
   has_many :banks
+  has_many :dwolla_transactions
+  has_many :fcm_tokens
+  has_many :transactions
   has_many :user_vices
   has_many :vices, through: :user_vices
-  has_many :transactions
-  has_many :agexes
-  has_one  :fund
-  has_one  :address
   has_many :yearly_funds
+  has_one  :address
+  has_one  :fund
   belongs_to :source_account, :class_name => "Account", optional: true
   belongs_to :deposit_account, :class_name => "Account", optional: true
   has_secure_password
@@ -57,13 +59,19 @@ class User < ApplicationRecord
   def as_json(options = {})
     json = super({
       include: [:fund, :address],
-      except: [:token, :password_digest, :fcm_tokens, :dwolla_id]
+      except:  [:token, :password_digest, :dwolla_id, :reset_password_token,
+                :reset_password_sent_at, :confirmation_token,
+                :confirmation_sent_at, :failed_attempts, :unlock_token,
+                :locked_at, :source_account_id, :deposit_account_id]
     }.merge(options))
-    # 'include' wasn't calling as_json
-    json['accounts'] = accounts
-    json['agexes'] = agexes
+    # Custom handling
     json['transactions'] = transactions.reject { |t| t.archived }
     json['vices'] = vices.map(&:name)
+    # Wasn't calling as_json
+    json['accounts'] = accounts
+    json['agexes'] = agexes
+    json['deposit_account'] = deposit_account
+    json['source_account'] = source_account
     json['yearly_funds'] = yearly_funds
     json
   end
@@ -234,7 +242,7 @@ class User < ApplicationRecord
         transaction.save!
       end if plaid_user.transactions
     end
-    self.sync_date = DateTime.current
+    self.transactions_refreshed_at = DateTime.current
     self.save!
   end
 end

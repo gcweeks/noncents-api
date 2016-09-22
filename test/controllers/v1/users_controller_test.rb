@@ -488,8 +488,11 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     @user.reload
-    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
-    account_ids = @user.accounts.map(&:id)
+    # Has checking/savings now
+    checking = @user.accounts.find_by(account_subtype: 'checking')
+    assert_not_equal checking, nil
+    savings = @user.accounts.find_by(account_subtype: 'savings')
+    assert_not_equal savings, nil
 
     # Requires one or more of the following: source, deposit, tracking
     put 'me/accounts', headers: @headers
@@ -498,18 +501,16 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure no Account is set yet
     assert_equal @user.source_account, nil
     assert_equal @user.deposit_account, nil
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
-    assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[2])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, false
 
     # Requires Dwolla to be authed
     put 'me/accounts', headers: @headers, params: {
-      source: account_ids[0],
-      deposit: account_ids[1],
-      tracking: [account_ids[0], account_ids[1]]
+      source: checking.id,
+      deposit: savings.id,
+      tracking: [checking.id, savings.id]
     }
     assert_response :bad_request
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
@@ -517,99 +518,97 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     # Set Accounts
     put 'me/accounts', headers: @headers, params: {
-      source: account_ids[0],
-      deposit: account_ids[1],
-      tracking: [account_ids[0], account_ids[1]]
+      source: checking.id,
+      deposit: savings.id,
+      tracking: [checking.id, savings.id]
     }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account.id, account_ids[0]
-    assert_equal @user.deposit_account.id, account_ids[1]
+    assert_equal @user.source_account.id, checking.id
+    assert_equal @user.deposit_account.id, savings.id
     # Verify that setting tracking was successful
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
-    account = Account.find_by(id: account_ids[2])
-    assert_equal account.tracking, false
 
     # Idempotency
     put 'me/accounts', headers: @headers, params: {
-      source: account_ids[0],
-      deposit: account_ids[1],
-      tracking: [account_ids[0], account_ids[1]]
+      source: checking.id,
+      deposit: savings.id,
+      tracking: [checking.id, savings.id]
     }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account.id, account_ids[0]
-    assert_equal @user.deposit_account.id, account_ids[1]
-    account = Account.find_by(id: account_ids[0])
+    assert_equal @user.source_account.id, checking.id
+    assert_equal @user.deposit_account.id, savings.id
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
 
     # Remove Accounts
     delete 'me/accounts', headers: @headers, params: {
       source: nil,
       deposit: 'blah',
-      tracking: [account_ids[0], account_ids[1]]
+      tracking: [checking.id, savings.id]
     }
     assert_response :success
     @user.reload
     assert_equal @user.source_account, nil
     assert_equal @user.deposit_account, nil
     # Verify that setting tracking was successful
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, false
 
     # Set only Source
-    put 'me/accounts', headers: @headers, params: { source: account_ids[0] }
+    put 'me/accounts', headers: @headers, params: { source: checking.id }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.source_account.id, checking.id
     assert_equal @user.deposit_account, nil
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, false
     delete 'me/accounts', headers: @headers, params: { source: nil }
     assert_response :success
 
     # Set only Deposit
-    put 'me/accounts', headers: @headers, params: { deposit: account_ids[1] }
+    put 'me/accounts', headers: @headers, params: { deposit: savings.id }
     assert_response :success
     @user.reload
     assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account.id, account_ids[1]
-    account = Account.find_by(id: account_ids[0])
+    assert_equal @user.deposit_account.id, savings.id
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, false
     delete 'me/accounts', headers: @headers, params: { deposit: nil }
     assert_response :success
 
     # Set only Tracking
-    put 'me/accounts', headers: @headers, params: { tracking: [account_ids[1]] }
+    put 'me/accounts', headers: @headers, params: { tracking: [savings.id] }
     assert_response :success
     @user.reload
     assert_equal @user.source_account, nil
     assert_equal @user.deposit_account, nil
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
     delete 'me/accounts', headers: @headers, params: {
-      tracking: [account_ids[1]]
+      tracking: [savings.id]
     }
     assert_response :success
 
     # Repopulate
     put 'me/accounts', headers: @headers, params: {
-      source: account_ids[0],
-      deposit: account_ids[1],
-      tracking: [account_ids[0], account_ids[1]]
+      source: checking.id,
+      deposit: savings.id,
+      tracking: [checking.id, savings.id]
     }
     assert_response :success
 
@@ -618,38 +617,38 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account.id, account_ids[1]
-    account = Account.find_by(id: account_ids[0])
+    assert_equal @user.deposit_account.id, savings.id
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
-    put 'me/accounts', headers: @headers, params: { source: account_ids[0] }
+    put 'me/accounts', headers: @headers, params: { source: checking.id }
 
     # Remove only Deposit
     delete 'me/accounts', headers: @headers, params: { deposit: nil }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account.id, account_ids[0]
+    assert_equal @user.source_account.id, checking.id
     assert_equal @user.deposit_account, nil
-    account = Account.find_by(id: account_ids[0])
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
-    put 'me/accounts', headers: @headers, params: { deposit: account_ids[1] }
+    put 'me/accounts', headers: @headers, params: { deposit: savings.id }
 
     # Remove only Tracking
     delete 'me/accounts', headers: @headers, params: {
-      tracking: [account_ids[0]]
+      tracking: [checking.id]
     }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account.id, account_ids[0]
-    assert_equal @user.deposit_account.id, account_ids[1]
-    account = Account.find_by(id: account_ids[0])
+    assert_equal @user.source_account.id, checking.id
+    assert_equal @user.deposit_account.id, savings.id
+    account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
-    account = Account.find_by(id: account_ids[1])
+    account = Account.find_by(id: savings.id)
     assert_equal account.tracking, true
-    put 'me/accounts', headers: @headers, params: { tracking: [account_ids[0]] }
+    put 'me/accounts', headers: @headers, params: { tracking: [checking.id] }
   end
 
   test 'should refresh transactions' do
@@ -671,7 +670,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     fcm_token_string_1 = '1234'
     fcm_token = FcmToken.find_by(token: fcm_token_string_1)
     assert_equal fcm_token, nil
-    assert_not @user.fcm_tokens.include?(fcm_token_string_1)
 
     # Register token
     post 'me/register_push_token', headers: @headers, params: {
@@ -687,7 +685,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal fcm_token, nil
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, @user.id
-    assert @user.fcm_tokens.include?(fcm_token_string_1)
 
     # Add another token
     fcm_token_string_2 = '5678'
@@ -704,13 +701,11 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal fcm_token, nil
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, @user.id
-    assert @user.fcm_tokens.include?(fcm_token_string_1)
     # Token 2
     fcm_token = FcmToken.find_by(token: fcm_token_string_2)
     assert_not_equal fcm_token, nil
     assert_equal fcm_token.token, fcm_token_string_2
     assert_equal fcm_token.user_id, @user.id
-    assert @user.fcm_tokens.include?(fcm_token_string_2)
 
     # Change Token 1 User
     # Create new User
@@ -748,13 +743,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal fcm_token, nil
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, user_2.id
-    assert user_2.fcm_tokens.include?(fcm_token_string_1)
-    # Ensure @user no longer has token
-    @user.reload
-    assert_not @user.fcm_tokens.include?(fcm_token_string_1)
-    # @user should still have other token, user_2 should not
-    assert @user.fcm_tokens.include?(fcm_token_string_2)
-    assert_not user_2.fcm_tokens.include?(fcm_token_string_2)
   end
 
   test 'should create dwolla account' do
@@ -943,12 +931,15 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     @user.reload
-    assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
-    account_ids = @user.accounts.map(&:id)
+    # Has checking/savings now
+    checking = @user.accounts.find_by(account_subtype: 'checking')
+    assert_not_equal checking, nil
+    savings = @user.accounts.find_by(account_subtype: 'savings')
+    assert_not_equal savings, nil
     # Auth source/deposit Accounts with Dwolla
     put 'me/accounts', headers: @headers, params: {
-      source: account_ids[0],
-      deposit: account_ids[1]
+      source: checking.id,
+      deposit: savings.id
     }
     assert_response :success
     vices = %w(CoffeeShops)

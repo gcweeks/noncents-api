@@ -1,6 +1,6 @@
 class Account < ApplicationRecord
-  belongs_to :user
   belongs_to :bank
+  belongs_to :user
   has_many :transactions
 
   validates :plaid_id, presence: true
@@ -8,4 +8,13 @@ class Account < ApplicationRecord
   validates :account_type, presence: true
   validates :institution, presence: true
   validates :bank, presence: true
+  validates :user, presence: true
+
+  def as_json(options = {})
+    json = super({
+      except: [:plaid_id, :account_num, :routing_num, :dwolla_id,
+               :user_id]
+    }.merge(options))
+    json
+  end
 end

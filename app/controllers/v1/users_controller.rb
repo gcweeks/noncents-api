@@ -378,6 +378,7 @@ class V1::UsersController < ApplicationController
       account_subtype: 'savings')
     account_savings.bank = bank
     account_savings.save!
+    @authed_user.deposit_account = account_savings
     account_checking = @authed_user.accounts.new(
       plaid_id: 'nban4wnPKEtnmEpaKzbYFYQvA7D7pnCaeDBMy',
       name: 'Plaid Checking',
@@ -388,6 +389,7 @@ class V1::UsersController < ApplicationController
       account_subtype: 'checking')
     account_checking.bank = bank
     account_checking.save!
+    @authed_user.source_account = account_checking
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',

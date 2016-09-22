@@ -15,25 +15,19 @@ module NotificationHelper
 
     # Find FcmToken or create one if it doesn't exist
     fcm_token = FcmToken.find_by(token: token)
-    if fcm_token
-      # If User ID doesn't match, update it and remove token from old User.
-      if fcm_token.user_id != user.id
-        old_user = User.find_by(id: fcm_token.user_id)
-        if old_user && old_user.fcm_tokens.delete(token)
-          old_user.save!
-        end
-        fcm_token.user_id = user.id
-        fcm_token.save!
-      end
-    else
-      FcmToken.create(token: token, user_id: user.id)
+    unless fcm_token
+      fcm_token = FcmToken.new(token: token)
+      fcm_token.user = user
+      fcm_token.save!
+      return true
     end
 
-    # Add token to user
-    unless user.fcm_tokens.include?(token)
-      user.fcm_tokens.push token
-      user.save!
+    # If User ID doesn't match, update it
+    if fcm_token.user.id != user.id
+      fcm_token.user = user
+      fcm_token.save!
     end
+
     true
   end
 
