@@ -1,6 +1,7 @@
 class V1::WebhooksController < ApplicationController
   include WebhookHelper
   include DwollaHelper
+  include SlackHelper
 
   before_action :init
   # No webhooks require authentication
@@ -10,10 +11,12 @@ class V1::WebhooksController < ApplicationController
     logger.info params[:From]
     logger.info "Body:"
     logger.info params[:Body]
+    SlackHelper.log("Twilio:\n```" + params.inspect + '```')
     head :ok
   end
 
   def plaid
+    # TODO: Implement
     logger.info params
     head :ok
   end
@@ -23,8 +26,11 @@ class V1::WebhooksController < ApplicationController
     return head :ok unless params[:topic] == 'customer_bank_transfer_completed'
     transaction_id = params[:resourceId]
     if transaction_id.nil?
-      # TODO email error
-      logger.warn "Webhook customer_bank_transfer_completed - nil resourceId"
+      # Log error
+      error = 'Webhook customer_bank_transfer_completed - nil resourceId'
+      logger.warn error
+      SlackHelper.log(error + "\n```" + params.inspect + '```')
+      # Don't retry webhook
       return head :ok
     end
 
@@ -38,9 +44,10 @@ class V1::WebhooksController < ApplicationController
     res = DwollaHelper.perform_transfer(transaction.balance,
                                         transaction.deposit,
                                         transaction.amount)
-    # TODO Handle res, which should be a Dwolla transaction ID.
+    # TODO: Handle res, which should be a Dwolla transaction ID.
     logger.info "Completed Dwolla webhook transaction."
     logger.info res
+    SlackHelper.log("Completed Dwolla webhook transaction.\n```" + res.inspect + '```')
 
     head :ok
   end

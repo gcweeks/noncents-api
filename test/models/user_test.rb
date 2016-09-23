@@ -137,6 +137,6 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test 'should get yearly fund' do
-    # TODO Implement
+    # TODO: Implement
   end
 end

@@ -14,11 +14,9 @@ class V1::UsersController < ApplicationController
     # Create the User's fund
     user.create_fund
     # Save and check for validation errors
-    if user.save
-      # Send User model with token
-      return render json: user.with_token, status: :ok
-    end
-    render json: user.errors, status: :unprocessable_entity
+    raise UnprocessableEntity.new(user.errors) unless user.save
+    # Send User model with token
+    render json: user.with_token, status: :ok
   end
 
   # GET /users/me
@@ -28,10 +26,10 @@ class V1::UsersController < ApplicationController
 
   # PATCH/PUT /users/me
   def update_me
-    if @authed_user.update(user_update_params)
-      return render json: @authed_user, status: :ok
+    unless @authed_user.update(user_update_params)
+      raise UnprocessableEntity.new(@authed_user.errors)
     end
-    render json: @authed_user.errors, status: :unprocessable_entity
+    render json: @authed_user, status: :ok
   end
 
   # GET /users/me/yearly_fund
@@ -44,11 +42,11 @@ class V1::UsersController < ApplicationController
     vices = []
     unless params[:vices]
       errors = { vices: ['are nil'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     unless params[:vices].is_a?(Array)
       errors = { vices: ['are in incorrect format'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     params[:vices].each do |vice_name|
       if vice_name == 'None'
@@ -58,7 +56,7 @@ class V1::UsersController < ApplicationController
       vice = Vice.find_by(name: vice_name)
       unless vice
         errors = { vices: ['have one or more invalid names'] }
-        return render json: errors, status: :unprocessable_entity
+        raise UnprocessableEntity.new(errors)
       end
       vices.push vice
     end
@@ -82,21 +80,21 @@ class V1::UsersController < ApplicationController
   def account_connect
     unless params[:username]
       errors = { username: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     unless params[:password]
       errors = { password: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     unless params[:type]
       errors = { type: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     # Get Plaid user
     options = { login_only: true }
     if ENV['RAILS_ENV'] == 'production'
       domain = ENV['DOMAIN']
-      return head :internal_server_error if domain.blank?
+      raise InternalServerError if domain.blank?
       options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
     end
     begin
@@ -122,19 +120,21 @@ class V1::UsersController < ApplicationController
                                         options: options)
                    end
     rescue Plaid::PlaidError => e
-      return handle_plaid_error(e)
+      raise get_plaid_error(e)
     end
 
     set_bank(@authed_user, params[:type], plaid_user.access_token)
 
-    render_mfa_or_populate(@authed_user, plaid_user)
+    ret = render_mfa_or_populate(@authed_user, plaid_user)
+    raise ret if ret.class <= Error
+    render json: ret, status: :ok
   end
 
   # GET users/me/account_mfa
   def account_mfa
     unless params[:access_token]
       errors = { access_token: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     begin
@@ -143,7 +143,7 @@ class V1::UsersController < ApplicationController
         options = { login_only: true }
         if ENV['RAILS_ENV'] == 'production'
           domain = ENV['DOMAIN']
-          return head :internal_server_error if domain.blank?
+          raise InternalServerError if domain.blank?
           options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
         end
         plaid_user.mfa_step(params[:answer], options: options)
@@ -157,12 +157,14 @@ class V1::UsersController < ApplicationController
           mask: ['can be submitted instead of answer to select MFA method'],
           type: ['can be submitted instead of answer to select MFA method']
         }
-        return render json: errors, status: :bad_request
+        raise BadRequest.new(errors)
       end
     rescue Plaid::PlaidError => e
-      return handle_plaid_error(e)
+      raise get_plaid_error(e)
     end
-    render_mfa_or_populate(@authed_user, plaid_user)
+    ret = render_mfa_or_populate(@authed_user, plaid_user)
+    raise ret if ret.class <= Error
+    render json: ret, status: :ok
   end
 
   # PUT users/me/accounts
@@ -177,7 +179,7 @@ class V1::UsersController < ApplicationController
       errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
     end
     unless errors.blank?
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     # Set Source/Deposit Accounts
@@ -204,9 +206,7 @@ class V1::UsersController < ApplicationController
       else
         errors[:general] = ['User is not yet verified with Dwolla']
       end
-      unless errors.blank?
-        return render json: errors, status: :bad_request
-      end
+      raise BadRequest.new(errors) unless errors.blank?
       @authed_user.save!
       @authed_user.dwolla_add_funding_sources
     end
@@ -231,9 +231,7 @@ class V1::UsersController < ApplicationController
 
       errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
     end
-    unless errors.blank?
-      return render json: errors, status: :bad_request
-    end
+    raise BadRequest.new(errors) unless errors.blank?
 
     # Remove Source/Deposit Accounts
     if params.has_key?(:source) || params.has_key?(:deposit)
@@ -266,13 +264,13 @@ class V1::UsersController < ApplicationController
   def register_push_token
     unless params[:token]
       errors = { token: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
-    if register_token_fcm(@authed_user, params[:token])
-      return render json: { 'status' => 'registered' }, status: :ok
+    unless register_token_fcm(@authed_user, params[:token])
+      errors = { 'status' => 'failed to register' }
+      raise InternalServerError.new(errors)
     end
-    render json: { 'status' => 'failed to register' },
-      status: :internal_server_error
+    render json: { 'status' => 'registered' }, status: :ok
   end
 
   def dwolla
@@ -290,34 +288,30 @@ class V1::UsersController < ApplicationController
         errors[:address] = ['is required']
       end
     end
-    unless errors.blank?
-      return render json: errors, status: :bad_request
-    end
+    raise BadRequest.new(errors) unless errors.blank?
 
     if params[:address]
-      unless addr.save
-        return render json: addr.errors, status: :unprocessable_entity
-      end
+      raise UnprocessableEntity.new(addr.errors) unless addr.save
     end
 
     @authed_user.save!
 
     # User's Address will be used in User.dwolla_create
-    if @authed_user.dwolla_create(params[:ssn], request.remote_ip)
-      return head :ok
+    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip)
+      raise InternalServerError
     end
-    head :internal_server_error
+    head :ok
   end
 
   def support
     # Validate payload
     unless params[:text]
       errors = { text: ['is required'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     unless params[:text].length <= 1000
       errors = { text: ['must be 1000 characters or less'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     # Build text
@@ -586,11 +580,9 @@ class V1::UsersController < ApplicationController
     unless params[:body]
       errors[:body] = ['is required']
     end
-    unless errors.blank?
-      return render json: errors, status: :bad_request
-    end
+    raise BadRequest.new(errors) unless errors.blank?
     unless test_notification(@authed_user, params[:title], params[:body])
-      return head :internal_server_error
+      raise InternalServerError
     end
     render json: { 'notification' => 'sent' }, status: :ok
   end
@@ -653,6 +645,8 @@ class V1::UsersController < ApplicationController
         errors[:deposit] = ['is incorrectly formatted - must be of type String']
       end
     end
+
+    # Tuples require 'return' keyword
     return source_account, deposit_account, errors
   end
 
@@ -673,6 +667,8 @@ class V1::UsersController < ApplicationController
         errors[:tracking] = ['is incorrectly formatted - must be of type Array']
       end
     end
+
+    # Tuples require 'return' keyword
     return tracking_accounts, errors
   end
 end

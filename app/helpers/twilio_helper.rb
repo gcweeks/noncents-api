@@ -21,9 +21,6 @@ module TwilioHelper
 
   def send_twilio_sms(to, body)
     init_twilio
-    logger.info @TWILIO_NUMBER
-    logger.info @TWILIO_SID
-    logger.info @TWILIO_TOKEN
     send_twilio_sms_with_number(@TWILIO_NUMBER, to, body)
   end
 

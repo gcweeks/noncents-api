@@ -1,4 +1,5 @@
 module UserHelper
+  include ErrorHelper
   def set_bank(user, type, access_token)
     # Find existing Bank or create new one
     bank = user.banks.find_by(access_token: access_token)
@@ -13,7 +14,7 @@ module UserHelper
     if plaid_user.mfa?
       # MFA
       ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
-      return render json: ret, status: :ok
+      return ret
     end
 
     # No MFA required
@@ -21,37 +22,35 @@ module UserHelper
     begin
       plaid_user = plaid_user.upgrade(:auth)
     rescue Plaid::PlaidError => e
-      return handle_plaid_error(e)
+      return get_plaid_error(e)
     end
     ret = populate_user_accounts(user, plaid_user)
     # 'ret' will either be a successfully saved User model or an ActiveRecord
     # error hash.
-    unless ret.is_a? User
-      return render json: ret, status: :internal_server_error
-    end
-    render json: ret, status: :ok
+    return InternalServerError.new(ret) unless ret.is_a?(User)
+    ret
   end
 
-  def handle_plaid_error(e)
-    status = case e
-    when Plaid::BadRequestError
-      :bad_request
-    when Plaid::UnauthorizedError
-      :unauthorized
-    when Plaid::RequestFailedError
-      :payment_required
-    when Plaid::NotFoundError
-      :not_found
-    when Plaid::ServerError
-      :internal_server_error
-    else
-      :internal_server_error
-    end
-    render json: {
-      'code' => e.code,
+  def get_plaid_error(e)
+    errors = {
+      'code' => 'e.code',
       'message' => e.message,
       'resolve' => e.resolve
-    }, status: status
+    }
+    return case e
+    when Plaid::BadRequestError
+      BadRequest.new(errors)
+    when Plaid::UnauthorizedError
+      Unauthorized.new(errors)
+    when Plaid::RequestFailedError
+      PaymentRequired.new(errors)
+    when Plaid::NotFoundError
+      NotFound.new(errors)
+    when Plaid::ServerError
+      InternalServerError.new(errors)
+    else
+      InternalServerError.new(errors)
+    end
   end
 
   private

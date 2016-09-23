@@ -30,6 +30,10 @@ gem 'dwolla_v2', '~> 1.1'
 gem "aws-ses", "~> 0.6.0", :require => 'aws/ses'
 # Rate limiting
 gem 'rack-throttle', '0.4.0'
+# Slack Notifications
+gem 'slack-notifier'
+# Exception Notifications
+gem 'exception_notification'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console

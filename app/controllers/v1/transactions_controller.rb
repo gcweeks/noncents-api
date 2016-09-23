@@ -4,53 +4,45 @@ class V1::TransactionsController < ApplicationController
 
   def back_out
     tid = params[:id]
-    unless @authed_user.transactions.map(&:id).include? tid
-      return head :not_found
-    end
+    raise NotFound unless @authed_user.transactions.map(&:id).include? tid
     transaction = Transaction.find_by(id: params[:id])
 
     if transaction.archived
       errors = { transaction: ['has already been archived'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     if transaction.invested
       errors = { transaction: ['has already been invested'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     transaction.backed_out = true
 
     # Save and check for validation errors
-    unless transaction.save
-      return render json: transaction.errors, status: :unprocessable_entity
-    end
+    raise UnprocessableEntity.new(transaction.errors) unless transaction.save
     render json: transaction, status: :ok
   end
 
   def restore
     tid = params[:id]
-    unless @authed_user.transactions.map(&:id).include? tid
-      return head :not_found
-    end
+    raise NotFound unless @authed_user.transactions.map(&:id).include? tid
     transaction = Transaction.find_by(id: params[:id])
 
     if transaction.archived
       errors = { transaction: ['has already been archived'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     if transaction.invested
       errors = { transaction: ['has already been invested'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
 
     transaction.backed_out = false
 
     # Save and check for validation errors
-    unless transaction.save
-      return render json: transaction.errors, status: :unprocessable_entity
-    end
+    raise UnprocessableEntity.new(transaction.errors) unless transaction.save
     render json: transaction, status: :ok
   end
 end

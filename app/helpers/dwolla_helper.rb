@@ -1,12 +1,13 @@
 module DwollaHelper
   require 'dwolla_v2'
+  include SlackHelper
 
   $dwolla = DwollaV2::Client.new(
     id: ENV['DWOLLA_CLIENT_ID'],
     secret: ENV['DWOLLA_CLIENT_SECRET']) do |config|
 
     config.environment = :sandbox
-    # TODO
+    # TODO: Implement
     # config.environment = :production
   end
 
@@ -17,7 +18,7 @@ module DwollaHelper
   )
 
   @@url = 'https://api-uat.dwolla.com/'
-  # TODO if @@account_token.client.environment == :production
+  # TODO: if @@account_token.client.environment == :production
   # 'https://api.dwolla.com/'
 
   def self.dev_get_customers
@@ -51,16 +52,20 @@ module DwollaHelper
     if res.class == DwollaV2::Response
       res = res.headers['location']
       unless res.slice!(@@url + 'customers/')
-        Rails.logger.warn 'DwollaHelper.add_customer - Couldn\'t slice'
+        error = 'DwollaHelper.add_customer - Couldn\'t slice'
+        Rails.logger.warn error
         Rails.logger.warn res
+        SlackHelper.log(error + "\n```" + res.inspect + '```')
         return nil
       end
       return res
     end
 
     unless res['_embedded']
-      Rails.logger.warn 'DwollaHelper.add_customer - No _embedded field'
+      error = 'DwollaHelper.add_customer - No _embedded field'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
 
@@ -77,8 +82,10 @@ module DwollaHelper
     end
 
     # No existing customer, log error
-    Rails.logger.warn 'DwollaHelper.add_customer - Error'
+    error = 'DwollaHelper.add_customer - Error'
+    Rails.logger.warn error
     Rails.logger.warn res['_embedded']
+    SlackHelper.log(error + "\n```" + res.inspect + '```')
     nil
   end
 
@@ -96,7 +103,9 @@ module DwollaHelper
     end
 
     if user.dwolla_id.nil?
-      Rails.logger.warn 'DwollaHelper.add_funding_source - Not Dwolla Authed'
+      error = 'DwollaHelper.add_funding_source - Not Dwolla Authed'
+      Rails.logger.warn error
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
 
@@ -111,29 +120,37 @@ module DwollaHelper
       if res['code'] == 'DuplicateResource'
         res = res['message']
         unless res.slice! 'Bank already exists: id='
-          Rails.logger.warn 'DwollaHelper.add_funding_source - Couldn\'t slice'
+          error = 'DwollaHelper.add_funding_source - Couldn\'t slice'
+          Rails.logger.warn error
           Rails.logger.warn res
+          SlackHelper.log(error + "\n```" + res.inspect + '```')
           return nil
         end
         return res
       end
-      Rails.logger.warn 'DwollaHelper.add_funding_source - Error'
+      error = 'DwollaHelper.add_funding_source - Error'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
 
     if res.class == DwollaV2::Response
       res = res.headers['location']
-      unless res.slice!(@@url + 'funding-sources/')
-        Rails.logger.warn 'DwollaHelper.add_customer - Couldn\'t slice res'
+      unless res.slice!(@@url +
+        error = 'DwollaHelper.add_customer - Couldn\'t slice res' 'funding-sources/')
+        Rails.logger.warn error
         Rails.logger.warn res
+        SlackHelper.log(error + "\n```" + res.inspect + '```')
         return nil
       end
       return res
     end
 
-    Rails.logger.warn 'DwollaHelper.add_funding_source - Unknown error'
+    error = 'DwollaHelper.add_funding_source - Unknown error'
+    Rails.logger.warn error
     Rails.logger.warn res
+    SlackHelper.log(error + "\n```" + res.inspect + '```')
     nil
   end
 
@@ -142,13 +159,17 @@ module DwollaHelper
 
     res = self.get('customers/' + user.dwolla_id + '/funding-sources')
     unless res.class == DwollaV2::Response
-      Rails.logger.warn 'DwollaHelper.remove_funding_sources - Couldn\t get funding sources'
+      error = 'DwollaHelper.remove_funding_sources - Couldn\t get funding sources'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return false
     end
     unless res['_embedded']
-      Rails.logger.warn 'DwollaHelper.remove_funding_sources - No _embedded field'
+      error = 'DwollaHelper.remove_funding_sources - No _embedded field'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return false
     end
 
@@ -174,8 +195,10 @@ module DwollaHelper
         :removed => true
       })
       unless res.status == 200
-        Rails.logger.warn 'DwollaHelper.remove_funding_sources - Couldn\t remove'
+        error = 'DwollaHelper.remove_funding_sources - Couldn\t remove'
+        Rails.logger.warn error
         Rails.logger.warn res
+        SlackHelper.log(error + "\n```" + res.inspect + '```')
         return false
       end
     end
@@ -185,13 +208,17 @@ module DwollaHelper
   def self.get_balance_funding_source(user)
     res = self.get('customers/' + user.dwolla_id + '/funding-sources')
     unless res.class == DwollaV2::Response
-      Rails.logger.warn 'DwollaHelper.get_balance_funding_source - Couldn\t get funding sources'
+      error = 'DwollaHelper.get_balance_funding_source - Couldn\t get funding sources'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return false
     end
     unless res['_embedded']
-      Rails.logger.warn 'DwollaHelper.get_balance_funding_source - No _embedded field'
+      error = 'DwollaHelper.get_balance_funding_source - No _embedded field'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return false
     end
 
@@ -246,8 +273,10 @@ module DwollaHelper
     )
 
     unless res && res.status == 201
-      Rails.logger.warn 'DwollaHelper.perform_transfer - Error'
+      error = 'DwollaHelper.perform_transfer - Error'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
 
@@ -261,13 +290,17 @@ module DwollaHelper
   def self.get_existing_funding_source(user, account)
     res = self.get('customers/' + user.dwolla_id + '/funding-sources')
     unless res.class == DwollaV2::Response
-      Rails.logger.warn 'DwollaHelper.get_existing_funding_source - Couldn\t get funding sources'
+      error = 'DwollaHelper.get_existing_funding_source - Couldn\t get funding sources'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
     unless res['_embedded']
-      Rails.logger.warn 'DwollaHelper.get_existing_funding_source - No _embedded field'
+      error = 'DwollaHelper.get_existing_funding_source - No _embedded field'
+      Rails.logger.warn error
       Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return nil
     end
 

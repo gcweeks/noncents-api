@@ -32,15 +32,15 @@ class V1::ApiController < ApplicationController
 
     if params[:user].blank?
       errors = { email: ['cannot be blank'], password: ['cannot be blank'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     if params[:user][:email].blank?
       errors = { email: ['cannot be blank'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     if params[:user][:password].blank?
       errors = { password: ['cannot be blank'] }
-      return render json: errors, status: :bad_request
+      raise BadRequest.new(errors)
     end
     user = User.find_by(email: params[:user][:email])
     return head :not_found unless user
@@ -61,7 +61,7 @@ class V1::ApiController < ApplicationController
       # Generate access token for User
       user.generate_token
       # Save and check for validation errors
-      render json: user.errors, status: :unprocessable_entity unless user.save
+      raise UnprocessableEntity.new(user.errors) unless user.save
     end
     # Send User model with token
     render json: user.with_token, status: :ok
@@ -74,7 +74,7 @@ class V1::ApiController < ApplicationController
   end
 
   def weekly_deduct_cron
-    return head :not_found unless request.remote_ip == '127.0.0.1'
+    raise NotFound unless request.remote_ip == '127.0.0.1'
 
     current_month = Date.current.beginning_of_month
     logger.info DateTime.current.strftime(
@@ -170,7 +170,7 @@ class V1::ApiController < ApplicationController
   end
 
   def transaction_refresh_cron
-    return head :not_found unless request.remote_ip == '127.0.0.1'
+    raise NotFound unless request.remote_ip == '127.0.0.1'
 
     logger.info DateTime.current.strftime(
       "CRON: Start transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")

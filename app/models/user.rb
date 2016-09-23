@@ -1,5 +1,6 @@
 class User < ApplicationRecord
   include ViceParser
+  include SlackHelper
   BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
   %w(0 O I l)
   PASSWORD_FORMAT = /\A
@@ -97,8 +98,16 @@ class User < ApplicationRecord
   def dwolla_create(ssn, ip)
     return false unless self.address && ssn && ip
     res = DwollaHelper.add_customer(self, ssn, ip)
-    if res.nil? || res.class != String
-      logger.warn 'Error in dwolla_create'
+    if res.nil?
+      error = 'Error in dwolla_create - nil res'
+      logger.warn error
+      SlackHelper.log(error)
+      return false
+    end
+    if res.class != String
+      error = 'Error in dwolla_create - bad res'
+      logger.warn error
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
       return false
     end
 
@@ -116,7 +125,9 @@ class User < ApplicationRecord
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
       if res.nil?
-        logger.warn "dwolla_add_funding_sources failed for source account"
+        error = 'dwolla_add_funding_sources failed for source account'
+        logger.warn error
+        SlackHelper.log(error)
         ret = false
       end
       self.source_account.dwolla_id = res
@@ -125,7 +136,9 @@ class User < ApplicationRecord
     if self.deposit_account
       res = DwollaHelper.add_funding_source(self, self.deposit_account)
       if res.nil?
-        logger.warn "dwolla_add_funding_sources failed for deposit account"
+        error = 'dwolla_add_funding_sources failed for deposit account'
+        logger.warn error
+        SlackHelper.log(error)
         ret = false
       end
       self.deposit_account.dwolla_id = res
@@ -137,7 +150,9 @@ class User < ApplicationRecord
   # Remove all accounts except funding source and destination from Dwolla
   def dwolla_remove_funding_sources
     unless DwollaHelper.remove_funding_sources(self)
-      logger.warn "dwolla_remove_funding_sources failed"
+      error = 'dwolla_remove_funding_sources failed'
+      logger.warn error
+      SlackHelper.log(error)
       return false
     end
     true
@@ -170,7 +185,7 @@ class User < ApplicationRecord
   end
 
   # Convenience method for getting the yearly_fund matching the current year
-  # TODO Eventually let User decide their own contribution date, e.g. during
+  # TODO: Eventually let User decide their own contribution date, e.g. during
   # Jan-Mar when they haven't deposited their $5500 max.
   def yearly_fund
     year = Date.current.year # e.g. 2016 (Integer)
@@ -207,6 +222,8 @@ class User < ApplicationRecord
         end
         logger.warn 'Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
           e.resolve + ' [' + status + ']'
+        SlackHelper.log("Plaid Error\n`" + e.code.to_s + "\n```" + e.message +
+          "```\n```" + e.resolve + "```\n```" + status + "```")
         next
       end
       # Push Transaction if it is from an Account that the User has added and
