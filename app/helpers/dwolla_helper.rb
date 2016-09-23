@@ -186,10 +186,12 @@ module DwollaHelper
     end
 
     # Remove each Dwolla funding source
+    existing_sources = []
+    existing_sources.push(user.source_account.id) if user.source_account
+    existing_sources.push(user.deposit_account.id) if user.deposit_account
     funding_source_ids.each do |funding_source_id|
       # Don't remove existing funding sources
-      next if [user.source_account.id,
-               user.deposit_account.id].include?(funding_source_id)
+      next if existing_sources.include?(funding_source_id)
 
       res = self.post('funding-sources/' + funding_source_id, {
         :removed => true
