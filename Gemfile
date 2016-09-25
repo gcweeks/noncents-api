@@ -21,7 +21,7 @@ gem 'bcrypt', '~> 3.1.11'
 # gem 'rack-cors'
 
 # Plaid
-gem 'plaid', '2.0.0'
+gem 'plaid'
 # Twilio
 gem 'twilio-ruby', '~> 4.0'
 # Dwolla
