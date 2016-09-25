@@ -137,8 +137,8 @@ module DwollaHelper
 
     if res.class == DwollaV2::Response
       res = res.headers['location']
-      unless res.slice!(@@url +
-        error = 'DwollaHelper.add_customer - Couldn\'t slice res' 'funding-sources/')
+      unless res.slice!(@@url + 'funding-sources/')
+        error = 'DwollaHelper.add_customer - Couldn\'t slice res'
         Rails.logger.warn error
         Rails.logger.warn res
         SlackHelper.log(error + "\n```" + res.inspect + '```')
