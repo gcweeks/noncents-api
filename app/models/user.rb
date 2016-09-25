@@ -1,8 +1,6 @@
 class User < ApplicationRecord
   include ViceParser
   include SlackHelper
-  BASE58_ALPHABET = ('0'..'9').to_a + ('A'..'Z').to_a + ('a'..'z').to_a -
-  %w(0 O I l)
   PASSWORD_FORMAT = /\A
   (?=.{8,})          # Must contain 8 or more characters
   (?=.*\d)           # Must contain a digit
@@ -85,14 +83,7 @@ class User < ApplicationRecord
   end
 
   def generate_token
-    # Generate token using Rails 4's ActiveRecord SecureToken implementation:
-    # SecureRandom.base58(24)
-    token = SecureRandom.random_bytes(24).unpack('C*').map do |byte|
-      idx = byte % 64
-      idx = SecureRandom.random_number(58) if idx >= 58
-      BASE58_ALPHABET[idx]
-    end.join
-    self.token = token
+    self.token = SecureRandom.base58(24)
   end
 
   def dwolla_create(ssn, ip)
