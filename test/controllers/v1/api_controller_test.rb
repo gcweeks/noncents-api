@@ -53,11 +53,51 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     post 'reset_password'
     assert_response :bad_request
 
+    post 'reset_password', params: { user: { email: 'doesnt@exist.com' } }
+    assert_response :not_found
+
+    assert_equal @user.reset_password_token, nil
+    assert_equal @user.reset_password_sent_at, nil
     post 'reset_password', params: { user: { email: @user.email } }
     assert_response :success
     @user.reload
+    assert_not_equal @user.reset_password_token, nil
+    assert_not_equal @user.reset_password_sent_at, nil
 
     password = 'NewPa55word'
+
+    # Validations
+    put 'update_password', params: {
+      token: @user.reset_password_token,
+      user: {
+        password: password
+      }
+    }
+    assert_response :bad_request
+    put 'update_password', params: {
+      token: @user.reset_password_token,
+      user: {
+        email: @user.email
+      }
+    }
+    assert_response :bad_request
+    put 'update_password', params: {
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :bad_request
+
+    # Incorrect token
+    put 'update_password', params: {
+      user: {
+        token: 'badtoken',
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :bad_request
 
     # Assert old password still works and new one doesn't
     get 'auth', params: {
@@ -77,6 +117,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :unauthorized
 
+    # Update password
     put 'update_password', params: {
       token: @user.reset_password_token,
       user: {
@@ -103,6 +144,30 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :unauthorized
+
+    # Expired
+    @user.reload
+    @user.reset_password_sent_at = DateTime.current - 1.hour
+    @user.save!
+    put 'update_password', params: {
+      token: @user.reset_password_token,
+      user: {
+        email: @user.email,
+        password: 'AnotherPa55word'
+      }
+    }
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_not_equal res['expired'], nil
+
+    # Assert password hasn't changed
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :success
   end
 
   test 'should check email' do
