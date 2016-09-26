@@ -86,6 +86,11 @@ class User < ApplicationRecord
     self.token = SecureRandom.base58(24)
   end
 
+  def generate_password_reset
+    self.reset_password_sent_at = DateTime.current
+    self.reset_password_token = SecureRandom.base58(6)
+  end
+
   def dwolla_create(ssn, ip)
     return false unless self.address && ssn && ip
     res = DwollaHelper.add_customer(self, ssn, ip)

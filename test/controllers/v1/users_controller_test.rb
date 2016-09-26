@@ -186,16 +186,18 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     fname = 'Test'
     lname = 'User'
+    password = 'NewPa55word'
+    phone = '5555555555'
     invest_percent = 15
     goal = 420
-    phone = '5555555555'
     put 'me', headers: @headers, params: {
       user: {
         fname: fname,
         lname: lname,
+        phone: phone,
+        password: password,
         invest_percent: invest_percent,
-        goal: goal,
-        phone: phone
+        goal: goal
       }
     }
     assert_response :success
@@ -206,6 +208,26 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['invest_percent'], invest_percent
     assert_equal res['goal'], goal
     assert_equal res['phone'], phone
+
+    # Assert new password works and old one doesn't
+    host! 'localhost:3000/v1/'
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :success
+    res = JSON.parse(@response.body)
+    assert_equal @user.token, res['token']
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: @user.password
+      }
+    }
+    assert_response :unauthorized
+    host! 'localhost:3000/v1/users/'
   end
 
   test 'should get yearly fund' do

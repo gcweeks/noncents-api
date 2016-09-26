@@ -7,6 +7,8 @@ class V1::ApiController < ApplicationController
     :request_get,
     :request_post,
     :auth,
+    :reset_password,
+    :update_password,
     :signup,
     :check_email,
     :twilio_callback,
@@ -65,6 +67,64 @@ class V1::ApiController < ApplicationController
     end
     # Send User model with token
     render json: user.with_token, status: :ok
+  end
+
+  def reset_password
+    unless params[:user] && params[:user][:email]
+      errors = { email: 'is required' }
+      raise BadRequest.new(errors) unless errors.blank?
+    end
+
+    user = User.find_by(email: params[:user][:email])
+    return head :not_found unless user
+
+    token = user.generate_password_reset
+    user.save!
+    # TODO Email token
+    head :ok
+  end
+
+  def update_password
+    errors = {}
+    if params[:user].blank?
+      errors = {
+        email: 'is required',
+        password: 'is required'
+      }
+      raise BadRequest.new(errors)
+    else
+      errors[:email] = 'is required' if params[:user][:email].blank?
+      errors[:password] = 'is required' if params[:user][:password].blank?
+    end
+    errors[:token] = 'is required' if params[:token].blank?
+    raise BadRequest.new(errors) unless errors.blank?
+
+    user = User.find_by(email: params[:user][:email])
+    return head :not_found unless user
+
+    unless user.reset_password_token && user.reset_password_sent_at
+      errors = { 'invalid' => 'User has never requested a password reset' }
+      raise BadRequest.new(errors)
+    end
+
+    diff = DateTime.current - user.reset_password_sent_at.to_datetime
+    # Difference between DateTimes is in days, convert to seconds
+    diff *= 1.days
+    unless diff.between?(0.seconds, 10.minutes)
+      errors = { 'expired' => 'The password reset token has expired' }
+      return render json: errors, status: :bad_request
+    end
+
+    unless params[:token] == user.reset_password_token
+      errors = { token: 'is incorrect' }
+      return render json: errors, status: :bad_request
+    end
+
+    unless user.update(password: params[:user][:password])
+      raise UnprocessableEntity.new(user.errors)
+    end
+
+    render json: user, status: :ok
   end
 
   def check_email

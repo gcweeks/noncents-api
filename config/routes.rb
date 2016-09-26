@@ -9,6 +9,8 @@ Rails.application.routes.draw do
     get  '/'                        => 'api#request_get'
     post '/'                        => 'api#request_post'
     get  'auth'                     => 'api#auth'
+    post 'reset_password'           => 'api#reset_password'
+    put  'update_password'          => 'api#update_password'
     get  'check_email'              => 'api#check_email'
     post 'weekly_deduct_cron'       => 'api#weekly_deduct_cron'
     post 'transaction_refresh_cron' => 'api#transaction_refresh_cron'

@@ -38,14 +38,71 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_equal AuthEvent.all.count, 1
     get 'auth', params: { user: { email: @user.email, password: @user.password } }
+    assert_response :success
     assert_equal AuthEvent.all.count, 2
     auth_event_2 = AuthEvent.all.where.not(id: auth_event_1.id).first
     assert_equal auth_event_2.user.id, @user.id
     assert_equal auth_event_2.success, true
     assert_equal auth_event_2.ip_address.to_s, @response.request.ip
+    res = JSON.parse(@response.body)
+    assert_equal @user.token, res['token']
+  end
+
+  test 'should reset password' do
+    # Requires email
+    post 'reset_password'
+    assert_response :bad_request
+
+    post 'reset_password', params: { user: { email: @user.email } }
+    assert_response :success
+    @user.reload
+
+    password = 'NewPa55word'
+
+    # Assert old password still works and new one doesn't
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: @user.password
+      }
+    }
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal @user.token, res['token']
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :unauthorized
+
+    put 'update_password', params: {
+      token: @user.reset_password_token,
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :success
+
+    # Assert new password works and old one doesn't
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: password
+      }
+    }
+    assert_response :success
+    res = JSON.parse(@response.body)
+    assert_equal @user.token, res['token']
+    get 'auth', params: {
+      user: {
+        email: @user.email,
+        password: @user.password
+      }
+    }
+    assert_response :unauthorized
   end
 
   test 'should check email' do
