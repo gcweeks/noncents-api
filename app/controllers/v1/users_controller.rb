@@ -602,7 +602,8 @@ class V1::UsersController < ApplicationController
     # UserMailer.documents_approved(@authed_user).deliver_now
     # UserMailer.documents_rejected(@authed_user).deliver_now
     # UserMailer.verification(@authed_user).deliver_now
-    UserMailer.account_suspended(@authed_user).deliver_now
+    # UserMailer.account_suspended(@authed_user).deliver_now
+    UserMailer.password_reset(@authed_user, 'test').deliver_now
     head :ok
   end
 

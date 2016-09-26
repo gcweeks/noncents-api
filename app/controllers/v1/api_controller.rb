@@ -80,7 +80,7 @@ class V1::ApiController < ApplicationController
 
     token = user.generate_password_reset
     user.save!
-    # TODO Email token
+    UserMailer.password_reset(user, token).deliver_now
     head :ok
   end
 
