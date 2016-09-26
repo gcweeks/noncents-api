@@ -103,7 +103,7 @@ class V1::ApiController < ApplicationController
     return head :not_found unless user
 
     unless user.reset_password_token && user.reset_password_sent_at
-      errors = { 'invalid' => 'User has never requested a password reset' }
+      errors = { token: 'has never been requested' }
       raise BadRequest.new(errors)
     end
 
@@ -111,7 +111,7 @@ class V1::ApiController < ApplicationController
     # Difference between DateTimes is in days, convert to seconds
     diff *= 1.days
     unless diff.between?(0.seconds, 10.minutes)
-      errors = { 'expired' => 'The password reset token has expired' }
+      errors = { token: 'is expired' }
       return render json: errors, status: :bad_request
     end
 
@@ -124,7 +124,7 @@ class V1::ApiController < ApplicationController
       raise UnprocessableEntity.new(user.errors)
     end
 
-    render json: user, status: :ok
+    head :ok
   end
 
   def check_email

@@ -67,6 +67,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     password = 'NewPa55word'
 
     # Validations
+    # No email
     put 'update_password', params: {
       token: @user.reset_password_token,
       user: {
@@ -74,6 +75,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :bad_request
+    # No password
     put 'update_password', params: {
       token: @user.reset_password_token,
       user: {
@@ -81,6 +83,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :bad_request
+    # No token
     put 'update_password', params: {
       user: {
         email: @user.email,
@@ -88,7 +91,6 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :bad_request
-
     # Incorrect token
     put 'update_password', params: {
       user: {
@@ -98,6 +100,16 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :bad_request
+    # Weak password
+    put 'update_password', params: {
+      token: @user.reset_password_token,
+      user: {
+        email: @user.email,
+        password: 'weak'
+      }
+    }
+    assert_response :unprocessable_entity
+
 
     # Assert old password still works and new one doesn't
     get 'auth', params: {
@@ -157,8 +169,6 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
       }
     }
     assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_not_equal res['expired'], nil
 
     # Assert password hasn't changed
     get 'auth', params: {
