@@ -95,7 +95,7 @@ class V1::UsersController < ApplicationController
     if ENV['RAILS_ENV'] == 'production'
       domain = ENV['DOMAIN']
       raise InternalServerError if domain.blank?
-      options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+      options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
     end
     begin
       plaid_user = if params[:type] == 'bofa' || params[:type] == 'chase'
@@ -144,7 +144,7 @@ class V1::UsersController < ApplicationController
         if ENV['RAILS_ENV'] == 'production'
           domain = ENV['DOMAIN']
           raise InternalServerError if domain.blank?
-          options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+          options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
         end
         plaid_user.mfa_step(params[:answer], options: options)
       elsif !params[:mask].blank?
