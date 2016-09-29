@@ -1,6 +1,4 @@
 Rails.application.routes.draw do
-  match '/404' => 'errors#error404', via: [:get, :post, :patch, :delete]
-
   namespace :v1 do
     resources :users, only: [:create]
     resources :vices, only: [:index]
