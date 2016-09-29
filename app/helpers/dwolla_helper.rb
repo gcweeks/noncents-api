@@ -50,7 +50,7 @@ module DwollaHelper
     })
 
     if res.class == DwollaV2::Response
-      res = res.headers['location']
+      ret = res.headers['location']
       unless res.slice!(@@url + 'customers/')
         error = 'DwollaHelper.add_customer - Couldn\'t slice'
         Rails.logger.warn error
@@ -58,10 +58,20 @@ module DwollaHelper
         SlackHelper.log(error + "\n```" + res.inspect + '```')
         return nil
       end
+      unless ret.class == String
+        error = 'DwollaHelper.add_customer - Bad slice'
+        Rails.logger.warn error
+        Rails.logger.warn res
+        SlackHelper.log(error + "\n```" + res.inspect + '```')
+        return nil
+      end
+      # Success
       return res
     end
 
-    unless res['_embedded']
+    # Possibly a duplicate, look in _embedded field
+
+    unless res['_embedded'] && res['_embedded']['errors']
       error = 'DwollaHelper.add_customer - No _embedded field'
       Rails.logger.warn error
       Rails.logger.warn res
@@ -69,15 +79,18 @@ module DwollaHelper
       return nil
     end
 
-    return res['_embedded']['id'] unless res['_embedded']['errors']
-
-    # Error
     if res['_embedded']['errors'][0]['code'] == 'Duplicate'
       existing = self.get('customers?search=' + user.email)
       if existing['_embedded']['customers'].size > 0
-        existing = existing['_embedded']['customers'][0]
-        existing.delete('_links')
-        return existing['id']
+        ret = existing['_embedded']['customers'][0]['id']
+        unless ret.class == String
+          error = 'DwollaHelper.add_customer - Bad duplicate id'
+          Rails.logger.warn error
+          Rails.logger.warn existing
+          SlackHelper.log(error + "\n```" + existing.inspect + '```')
+          return nil
+        end
+        return ret
       end
     end
 
@@ -87,6 +100,36 @@ module DwollaHelper
     Rails.logger.warn res['_embedded']
     SlackHelper.log(error + "\n```" + res.inspect + '```')
     nil
+  end
+
+  def self.get_customer_status(dwolla_id)
+    res = self.get('customers/' + dwolla_id)
+
+    unless res.class == DwollaV2::Response
+      error = 'DwollaHelper.get_customer_status - Bad response'
+      Rails.logger.warn error
+      Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
+      return nil
+    end
+
+    if res['status'].blank?
+      error = 'DwollaHelper.get_customer_status - Unknown response'
+      Rails.logger.warn error
+      Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
+      return nil
+    end
+
+    ret = res['status']
+    unless ret.class == String
+      error = 'DwollaHelper.add_customer - Bad slice'
+      Rails.logger.warn error
+      Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
+      return nil
+    end
+    ret
   end
 
   def self.get_funding_source(user)

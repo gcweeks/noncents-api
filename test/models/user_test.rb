@@ -113,19 +113,23 @@ class UserTest < ActiveSupport::TestCase
     user.save!
 
     assert_equal user.dwolla_id, nil
+    assert_equal user.dwolla_status, nil
 
     # Bad input
     ret = user.dwolla_create(nil, '127.0.0.1')
     assert_equal ret, false
     assert_equal user.dwolla_id, nil
+    assert_equal user.dwolla_status, nil
     ret = user.dwolla_create('123-45-6789', nil)
     assert_equal ret, false
     assert_equal user.dwolla_id, nil
+    assert_equal user.dwolla_status, nil
 
     # Correct input
     ret = user.dwolla_create('123-45-6789', '127.0.0.1')
     assert_equal ret, true
     assert_not_equal user.dwolla_id, nil
+    assert_not_equal user.dwolla_status, nil
   end
 
   test 'should add dwolla funding source' do

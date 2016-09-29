@@ -58,10 +58,11 @@ class User < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      except:  [:token, :password_digest, :dwolla_id, :reset_password_token,
-                :reset_password_sent_at, :confirmation_token,
-                :confirmation_sent_at, :failed_attempts, :unlock_token,
-                :locked_at, :source_account_id, :deposit_account_id]
+      except: [:token, :password_digest, :dwolla_id, :dwolla_status,
+               :reset_password_token, :reset_password_sent_at,
+               :confirmation_token, :confirmation_sent_at, :failed_attempts,
+               :unlock_token, :locked_at, :source_account_id,
+               :deposit_account_id]
     }.merge(options))
     # Manually call as_json
     json['accounts'] = accounts
@@ -93,21 +94,25 @@ class User < ApplicationRecord
 
   def dwolla_create(ssn, ip)
     return false unless self.address && ssn && ip
-    res = DwollaHelper.add_customer(self, ssn, ip)
-    if res.nil?
-      error = 'Error in dwolla_create - nil res'
-      logger.warn error
-      SlackHelper.log(error)
-      return false
-    end
-    if res.class != String
-      error = 'Error in dwolla_create - bad res'
-      logger.warn error
-      SlackHelper.log(error + "\n```" + res.inspect + '```')
-      return false
-    end
 
-    self.dwolla_id = res
+    # Create Dwolla User
+    res = DwollaHelper.add_customer(self, ssn, ip)
+    # Ensure response is a Dwolla ID
+    return false if res.nil?
+    dwolla_id = res
+
+    # Save Dwolla ID
+    self.dwolla_id = dwolla_id
+    self.save!
+
+    # Get Dwolla Customer status
+    res = DwollaHelper.get_customer_status(dwolla_id)
+    # Ensure response is a status
+    return false if res.nil?
+    status = res
+
+    # Save Dwolla Customer status
+    self.dwolla_status = status
     self.save!
     true
   end
