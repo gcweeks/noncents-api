@@ -14,6 +14,7 @@ class V1::ApiController < ApplicationController
     :twilio_callback,
     :weekly_deduct_cron,
     :transaction_refresh_cron,
+    :dev_ratelimit,
     :version_ios
   ]
 
@@ -243,6 +244,11 @@ class V1::ApiController < ApplicationController
 
     logger.info DateTime.current.strftime(
       "CRON: Finished transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
+    head :ok
+  end
+
+  def dev_ratelimit
+    # Empty method, route used only to test ratelimiting
     head :ok
   end
 

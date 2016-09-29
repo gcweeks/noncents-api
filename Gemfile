@@ -10,7 +10,7 @@ gem 'pg', '0.18.4'
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
 # gem 'jbuilder', '~> 2.5'
 # Use Redis adapter to run Action Cable in production
-# gem 'redis', '~> 3.0'
+gem 'redis', '~> 3.0'
 # Use ActiveModel has_secure_password
 gem 'bcrypt', '~> 3.1.11'
 
@@ -29,7 +29,9 @@ gem 'dwolla_v2', '~> 1.1'
 # AWS SES
 gem "aws-ses", "~> 0.6.0", :require => 'aws/ses'
 # Rate limiting
-gem 'rack-throttle', '0.4.0'
+# gem 'rack-throttle', '0.4.0'
+# Rack Attack
+gem 'rack-attack'
 # Slack Notifications
 gem 'slack-notifier'
 # Exception Notifications

@@ -69,8 +69,8 @@ Rails.application.configure do
   # require 'syslog/logger'
   # config.logger = ActiveSupport::TaggedLogging.new(Syslog::Logger.new 'app-name')
 
-  if ENV["RAILS_LOG_TO_STDOUT"].present?
-    logger           = ActiveSupport::Logger.new(STDOUT)
+  if ENV['RAILS_LOG_TO_STDOUT'].present?
+    logger = ActiveSupport::Logger.new(STDOUT)
     logger.formatter = config.log_formatter
     config.logger = ActiveSupport::TaggedLogging.new(logger)
   end
@@ -78,6 +78,8 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  config.middleware.use Rack::Throttle::Minute, max: 60, code: 420
-  config.middleware.use Rack::Throttle::Hourly, max: 1000, code: 420
+  # config.middleware.use Rack::Throttle::Minute, max: 60, code: 420
+  # config.middleware.use Rack::Throttle::Hourly, max: 1000, code: 420
+
+  config.middleware.use Rack::Attack
 end

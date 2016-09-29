@@ -47,6 +47,8 @@ Rails.application.configure do
   # routes, locales, etc. This feature depends on the listen gem.
   config.file_watcher = ActiveSupport::EventedFileUpdateChecker
 
-  config.middleware.use Rack::Throttle::Minute, max: 60, code: 420
-  config.middleware.use Rack::Throttle::Hourly, max: 1000, code: 420
+  # config.middleware.use Rack::Throttle::Minute, max: 60, code: 420
+  # config.middleware.use Rack::Throttle::Hourly, max: 1000, code: 420
+
+  config.middleware.use Rack::Attack
 end
