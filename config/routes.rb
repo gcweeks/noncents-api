@@ -12,17 +12,14 @@ Rails.application.routes.draw do
     get  'check_email'              => 'api#check_email'
     post 'weekly_deduct_cron'       => 'api#weekly_deduct_cron'
     post 'transaction_refresh_cron' => 'api#transaction_refresh_cron'
-    get  'dev_ratelimit'            => 'api#dev_ratelimit'
     scope 'version' do
       get 'ios' => 'api#version_ios'
     end
-
     scope 'webhooks' do
       get  'twilio' => 'webhooks#twilio'
       get  'plaid'  => 'webhooks#plaid'
       post 'dwolla' => 'webhooks#dwolla'
     end
-
 
     # Model-specific calls (other than those created by resources)
     scope 'users' do

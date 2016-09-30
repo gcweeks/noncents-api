@@ -14,7 +14,6 @@ class V1::ApiController < ApplicationController
     :twilio_callback,
     :weekly_deduct_cron,
     :transaction_refresh_cron,
-    :dev_ratelimit,
     :version_ios
   ]
 
@@ -33,6 +32,10 @@ class V1::ApiController < ApplicationController
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
 
+    unless request.headers["Content-Type"] == 'application/x-www-form-urlencoded'
+      errors = { content_type: ['must be application/x-www-form-urlencoded'] }
+      raise BadRequest.new(errors)
+    end
     if params[:user].blank?
       errors = { email: ['cannot be blank'], password: ['cannot be blank'] }
       raise BadRequest.new(errors)
@@ -244,11 +247,6 @@ class V1::ApiController < ApplicationController
 
     logger.info DateTime.current.strftime(
       "CRON: Finished transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
-    head :ok
-  end
-
-  def dev_ratelimit
-    # Empty method, route used only to test ratelimiting
     head :ok
   end
 
