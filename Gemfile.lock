@@ -85,6 +85,9 @@ GEM
     nokogiri (1.6.8)
       mini_portile2 (~> 2.1.0)
       pkg-config (~> 1.1.7)
+    passenger (5.0.30)
+      rack
+      rake (>= 0.8.1)
     pg (0.18.4)
     pkg-config (1.1.7)
     plaid (2.0.0)
@@ -173,6 +176,7 @@ DEPENDENCIES
   dwolla_v2 (~> 1.1)
   exception_notification
   listen (~> 3.0.5)
+  passenger (~> 5.0)
   pg (= 0.18.4)
   plaid
   rack-attack
