@@ -51,7 +51,7 @@ module DwollaHelper
 
     if res.class == DwollaV2::Response
       ret = res.headers['location']
-      unless res.slice!(@@url + 'customers/')
+      unless ret && ret.slice!(@@url + 'customers/')
         error = 'DwollaHelper.add_customer - Couldn\'t slice'
         Rails.logger.warn error
         Rails.logger.warn res
@@ -66,7 +66,7 @@ module DwollaHelper
         return nil
       end
       # Success
-      return res
+      return ret
     end
 
     # Possibly a duplicate, look in _embedded field
@@ -161,15 +161,15 @@ module DwollaHelper
 
     if res.class == DwollaV2::Error
       if res['code'] == 'DuplicateResource'
-        res = res['message']
-        unless res.slice! 'Bank already exists: id='
+        ret = res['message']
+        unless ret && ret.slice!('Bank already exists: id=')
           error = 'DwollaHelper.add_funding_source - Couldn\'t slice'
           Rails.logger.warn error
           Rails.logger.warn res
           SlackHelper.log(error + "\n```" + res.inspect + '```')
           return nil
         end
-        return res
+        return ret
       end
       error = 'DwollaHelper.add_funding_source - Error'
       Rails.logger.warn error
@@ -179,15 +179,15 @@ module DwollaHelper
     end
 
     if res.class == DwollaV2::Response
-      res = res.headers['location']
-      unless res.slice!(@@url + 'funding-sources/')
-        error = 'DwollaHelper.add_customer - Couldn\'t slice res'
+      ret = res.headers['location']
+      unless ret && ret.slice!(@@url + 'funding-sources/')
+        error = 'DwollaHelper.add_customer - Couldn\'t slice ret'
         Rails.logger.warn error
         Rails.logger.warn res
         SlackHelper.log(error + "\n```" + res.inspect + '```')
         return nil
       end
-      return res
+      return ret
     end
 
     error = 'DwollaHelper.add_funding_source - Unknown error'
@@ -325,9 +325,15 @@ module DwollaHelper
       return nil
     end
 
-    res = res.headers['location']
-    return nil unless res && res.slice!(@@url + 'transfers/')
-    res
+    ret = res.headers['location']
+    unless ret && ret.slice!(@@url + 'transfers/')
+      error = 'DwollaHelper.perform_transfer - Couldn\'t slice ret'
+      Rails.logger.warn error
+      Rails.logger.warn res
+      SlackHelper.log(error + "\n```" + res.inspect + '```')
+      return nil
+    end
+    ret
   end
 
   private
