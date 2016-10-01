@@ -58,11 +58,10 @@ class User < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      except: [:token, :password_digest, :dwolla_id, :dwolla_status,
-               :reset_password_token, :reset_password_sent_at,
-               :confirmation_token, :confirmation_sent_at, :failed_attempts,
-               :unlock_token, :locked_at, :source_account_id,
-               :deposit_account_id]
+      except: [:token, :password_digest, :dwolla_id, :reset_password_token,
+               :reset_password_sent_at, :confirmation_token,
+               :confirmation_sent_at, :failed_attempts, :unlock_token,
+               :locked_at, :source_account_id, :deposit_account_id]
     }.merge(options))
     # Manually call as_json
     json['accounts'] = accounts
