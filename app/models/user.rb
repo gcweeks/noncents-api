@@ -116,6 +116,31 @@ class User < ApplicationRecord
     true
   end
 
+  def dwolla_submit_document(file, type)
+    return false if file.blank? || type.blank?
+
+    # Submit Dwolla Document
+    res = DwollaHelper.submit_document(self, file, type)
+    # Ensure response is a Dwolla Document ID
+    return false if res.blank?
+    document_id = res
+
+    document = DwollaDocument.new(dwolla_id: document_id)
+    document.user = self
+    document.save!
+
+    # Get Dwolla Customer status
+    res = DwollaHelper.get_customer_status(dwolla_id)
+    # Ensure response is a status
+    return false if res.blank?
+    status = res
+
+    # Save Dwolla Customer status
+    self.dwolla_status = status
+    self.save!
+    true
+  end
+
   # Add funding source and destination to Dwolla
   def dwolla_add_funding_sources
     # Delete old funding sources

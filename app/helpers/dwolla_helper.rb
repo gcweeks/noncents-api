@@ -22,7 +22,7 @@ module DwollaHelper
   # 'https://api.dwolla.com/'
 
   def self.add_customer(user, ssn, ip, retrying = false)
-    return nil unless user && user.address && ssn && ip
+    return nil if user.blank? || user.address.blank? || ssn.blank? || ip.blank?
 
     payload = {
       firstName: user.fname,
@@ -82,6 +82,41 @@ module DwollaHelper
     else
       log_error('DwollaHelper.add_customer - Error', response)
     end
+
+    nil
+  end
+
+  def self.submit_document(user, file, type)
+    return nil if user.blank? || file.blank? || type.blank?
+    if user.dwolla_id.blank?
+      log_error('DwollaHelper.submit_document - Retrying without dwolla_id')
+      return nil
+    end
+
+    route = 'customers/' + user.dwolla_id
+    response = self.post(route, file: file, documentType: type)
+
+    if response.class == DwollaV2::Response
+      ret = response.headers['location']
+      unless ret && ret.slice!(@@url + 'documents/')
+        log_error('DwollaHelper.submit_document - Couldn\'t slice', response)
+        return nil
+      end
+      unless ret.class == String
+        log_error('DwollaHelper.submit_document - Bad slice', response)
+        return nil
+      end
+      # Success
+      return ret
+    elsif response.failureReason.present?
+      # One of: ScanNotReadable, ScanNotUploaded, ScanIdTypeNotSupported,
+      # ScanNameMismatch, ScanFailedOther, or FailedOther
+      log_error('DwollaHelper.submit_document - Document failure', response.failureReason)
+      return nil
+    end
+
+    # Unknown error
+    log_error('DwollaHelper.submit_document - Unknown error', response)
 
     nil
   end

@@ -294,14 +294,36 @@ class V1::UsersController < ApplicationController
     end
     @authed_user.save!
 
-    # Whether to create or retry creation of  Dwolla Customer object
+    # Whether to create or retry creation of a Dwolla Customer object
     retrying = params[:retry].present?
     # User's Address will be used in User.dwolla_create
     unless @authed_user.dwolla_create(params[:ssn], request.remote_ip, retrying)
       raise InternalServerError
     end
 
-    head :ok
+    @authed_user.reload
+    render json: @authed_user, status: :ok
+  end
+
+  def dwolla_document
+    # Validate payload
+    errors = {}
+    document_types = ['passport', 'license', 'idCard']
+    if params[:type].blank?
+      errors[:type] = ['is required']
+    elsif !document_types.include?(params[:type])
+      errors[:type] = ['must be one of "passport", "license", or "idCard"']
+    end
+    if params[:file].blank?
+      errors[:file] = ['is required']
+    end
+
+    unless @authed_user.dwolla_submit_document(file, type)
+      raise InternalServerError
+    end
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   def support
