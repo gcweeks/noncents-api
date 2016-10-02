@@ -791,6 +791,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['address'], ['is required']
+    assert_equal nil, @user.dwolla_status
 
     # Address in payload
     post 'me/dwolla', headers: @headers, params: {
@@ -804,6 +805,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal address[:city], @user.address.city
     assert_equal address[:state], @user.address.state
     assert_equal address[:zip], @user.address.zip
+    assert_not_equal nil, @user.dwolla_status
   end
 
   test 'should refresh transactions dev' do

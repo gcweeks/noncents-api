@@ -21,7 +21,7 @@ module DwollaHelper
   # TODO: if @@account_token.client.environment == :production
   # 'https://api.dwolla.com/'
 
-  def self.add_customer(user, ssn, ip)
+  def self.add_customer(user, ssn, ip, retrying = false)
     return nil unless user && user.address && ssn && ip
 
     payload = {
@@ -39,7 +39,15 @@ module DwollaHelper
       dateOfBirth: user.dob.to_s,
       ssn: ssn
     }
-    response = self.post('customers', payload)
+    route = 'customers'
+    if retrying
+      if user.dwolla_id.blank?
+        log_error('DwollaHelper.add_customer - Retrying without dwolla_id')
+        return nil
+      end
+      route = route + '/' + user.dwolla_id
+    end
+    response = self.post(route, payload)
 
     if response.class == DwollaV2::Response
       ret = response.headers['location']
@@ -53,21 +61,27 @@ module DwollaHelper
       end
       # Success
       return ret
+    elsif response.class == DwollaV2::ValidationError && !retrying
+      # Possibly a duplicate, look in _embedded field
+      errors = response['_embedded']['errors'] rescue nil
+      if errors.blank? || !errors.is_a?(Array) || errors.length == 0
+        log_error('DwollaHelper.add_customer - No embedded errors', response)
+        return nil
+      end
+      errors.each do |error|
+        if error['code'] == 'Duplicate'
+          return self.get_existing_customer(user.email)
+        end
+      end
+      # Some other validation error
     end
 
-    # Possibly a duplicate, look in _embedded field
-
-    unless response['_embedded'] && response['_embedded']['errors']
-      log_error('DwollaHelper.add_customer - No _embedded field', response)
-      return nil
+    # Unknown error
+    if retrying
+      log_error('DwollaHelper.add_customer - Error (retrying)', response)
+    else
+      log_error('DwollaHelper.add_customer - Error', response)
     end
-
-    if response['_embedded']['errors'][0]['code'] == 'Duplicate'
-      return self.get_existing_customer(user.email)
-    end
-
-    # No existing customer, log error
-    log_error('DwollaHelper.add_customer - Error', response['_embedded'])
 
     nil
   end
@@ -269,10 +283,13 @@ module DwollaHelper
 
   private
 
-  def self.log_error(error, response)
-    Rails.logger.warn error
-    Rails.logger.warn response
-    SlackHelper.log(error + "\n```" + response.inspect + '```')
+  def self.log_error(error, response = nil)
+    Rails.logger.warn(error)
+    if response.present?
+      Rails.logger.warn(response)
+      error = error + "\n```" + response.inspect + '```'
+    end
+    SlackHelper.log(error)
   end
 
   def self.get_existing_customer(email)

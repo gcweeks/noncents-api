@@ -274,14 +274,14 @@ class V1::UsersController < ApplicationController
   end
 
   def dwolla
-    # Validate payload
+    # Validate payload, optionally including storing address
     errors = {}
     unless params[:ssn]
       errors[:ssn] = ['is required']
     end
     addr = @authed_user.address
     unless addr
-      if params[:address]
+      if params[:address].present?
         addr = Address.new(address_params)
         @authed_user.address = addr
       else
@@ -289,17 +289,18 @@ class V1::UsersController < ApplicationController
       end
     end
     raise BadRequest.new(errors) unless errors.blank?
-
     if params[:address]
       raise UnprocessableEntity.new(addr.errors) unless addr.save
     end
-
     @authed_user.save!
 
+    # Whether to create or retry creation of  Dwolla Customer object
+    retrying = params[:retry].present?
     # User's Address will be used in User.dwolla_create
-    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip)
+    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip, retrying)
       raise InternalServerError
     end
+
     head :ok
   end
 

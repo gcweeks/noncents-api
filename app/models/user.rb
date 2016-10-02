@@ -91,13 +91,13 @@ class User < ApplicationRecord
     self.reset_password_token = SecureRandom.base58(6)
   end
 
-  def dwolla_create(ssn, ip)
-    return false unless self.address && ssn && ip
+  def dwolla_create(ssn, ip, retrying = false)
+    return false if self.address.blank? || ssn.blank? || ip.blank?
 
     # Create Dwolla User
-    res = DwollaHelper.add_customer(self, ssn, ip)
-    # Ensure response is a Dwolla ID
-    return false if res.nil?
+    res = DwollaHelper.add_customer(self, ssn, ip, retrying)
+    # Ensure response is a Dwolla Customer ID
+    return false if res.blank?
     dwolla_id = res
 
     # Save Dwolla ID
@@ -107,7 +107,7 @@ class User < ApplicationRecord
     # Get Dwolla Customer status
     res = DwollaHelper.get_customer_status(dwolla_id)
     # Ensure response is a status
-    return false if res.nil?
+    return false if res.blank?
     status = res
 
     # Save Dwolla Customer status
@@ -124,7 +124,7 @@ class User < ApplicationRecord
     # Add new funding sources
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
-      if res.nil?
+      if res.blank?
         error = 'dwolla_add_funding_sources failed for source account'
         logger.warn error
         SlackHelper.log(error)
@@ -135,7 +135,7 @@ class User < ApplicationRecord
     end
     if self.deposit_account
       res = DwollaHelper.add_funding_source(self, self.deposit_account)
-      if res.nil?
+      if res.blank?
         error = 'dwolla_add_funding_sources failed for deposit account'
         logger.warn error
         SlackHelper.log(error)
@@ -190,7 +190,7 @@ class User < ApplicationRecord
   def yearly_fund
     year = Date.current.year # e.g. 2016 (Integer)
     yearly_fund = self.yearly_funds.find_by(year: year)
-    return yearly_fund unless yearly_fund.nil?
+    return yearly_fund unless yearly_fund.blank?
     # No yearly_fund model found matching this year, create one
     yearly_fund = self.yearly_funds.new(year: year)
     yearly_fund.save!
@@ -249,7 +249,7 @@ class User < ApplicationRecord
                         plaid_transaction.category_hierarchy[1],
                         plaid_transaction.category_hierarchy[2])
         # Skip all Transactions that aren't classified as a particular Vice
-        next if vice.nil?
+        next if vice.blank?
         next unless self.vices.include? vice
         # Create Transaction
         transaction = Transaction.from_plaid(plaid_transaction)
