@@ -89,7 +89,7 @@ module DwollaHelper
   def self.submit_document(user, file, type)
     return nil if user.blank? || file.blank? || type.blank?
     if user.dwolla_id.blank?
-      log_error('DwollaHelper.submit_document - Retrying without dwolla_id')
+      log_error('DwollaHelper.submit_document - Submitting without dwolla_id')
       return nil
     end
 
@@ -108,10 +108,8 @@ module DwollaHelper
       end
       # Success
       return ret
-    elsif response.failureReason.present?
-      # One of: ScanNotReadable, ScanNotUploaded, ScanIdTypeNotSupported,
-      # ScanNameMismatch, ScanFailedOther, or FailedOther
-      log_error('DwollaHelper.submit_document - Document failure', response.failureReason)
+    else
+      log_error('DwollaHelper.submit_document - Document failure', response)
       return nil
     end
 
@@ -198,6 +196,8 @@ module DwollaHelper
   end
 
   def self.remove_funding_sources(user)
+    return false if user.dwolla_id.blank?
+
     return true if ENV['RAILS_ENV'] == 'test'
 
     response = self.get('customers/' + user.dwolla_id + '/funding-sources')
@@ -262,19 +262,28 @@ module DwollaHelper
     nil
   end
 
-  def self.transfer_money(balance, source, deposit, amount)
+  def self.transfer_money(user, balance, amount)
+    return false if user.blank? || balance.blank? || amount.blank?
+
     return true if ENV['RAILS_ENV'] == 'test'
 
     # Perform Source->Balance transaction
+    source = user.source_account.dwolla_id
+    deposit = user.deposit_account.dwolla_id
     response = self.perform_transfer(source, balance, amount)
     return false if response.blank?
 
     # Wait for webhook indicating that transaction has cleared
-    DwollaTransaction.create(dwolla_id: response,
-                             balance: balance,
-                             source: source,
-                             deposit: deposit,
-                             amount: amount)
+    dt = DwollaTransaction.new(dwolla_id: response,
+                          balance: balance,
+                          source: source,
+                          deposit: deposit,
+                          amount: amount)
+    dt.user = user
+    unless dt.save
+      log_error('DwollaHelper.perform_transfer - Couldn\'t create DwollaTransaction', dt.errors)
+      return false
+    end
 
     true
   end

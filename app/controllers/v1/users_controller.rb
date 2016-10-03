@@ -316,9 +316,19 @@ class V1::UsersController < ApplicationController
     end
     if params[:file].blank?
       errors[:file] = ['is required']
+    elsif params[:file].class != ActionDispatch::Http::UploadedFile
+      errors[:file] = ['is uploaded incorrectly']
+    else
+      filetypes = ['.jpg', '.jpeg', '.png', '.tif', '.pdf']
+      extension = params[:file].original_filename[/\.[A-Za-z]{3,4}$/]
+      unless filetypes.include?(extension)
+        errors[:file] = ['must be one of: ' + filetypes.join(', ')]
+      end
     end
+    raise BadRequest.new(errors) unless errors.blank?
 
-    unless @authed_user.dwolla_submit_document(file, type)
+    file = Faraday::UploadIO.new params[:file].path, params[:file].content_type
+    unless @authed_user.dwolla_submit_document(file, params[:type])
       raise InternalServerError
     end
 
@@ -407,6 +417,8 @@ class V1::UsersController < ApplicationController
     account_checking.bank = bank
     account_checking.save!
     @authed_user.source_account = account_checking
+    @authed_user.save!
+    @authed_user.dwolla_add_funding_sources
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',
