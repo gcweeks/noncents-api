@@ -333,7 +333,9 @@ module DwollaHelper
       Rails.logger.warn(response)
       error = error + "\n```" + response.inspect + '```'
     end
-    SlackHelper.log(error)
+    if ENV['RAILS_ENV'] == 'production'# || ENV['RAILS_ENV'] == 'development'
+      SlackHelper.log(error)
+    end
   end
 
   def self.get_existing_customer(email)
