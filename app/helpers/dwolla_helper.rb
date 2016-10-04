@@ -235,19 +235,29 @@ module DwollaHelper
     nil
   end
 
-  def self.transfer_money(balance, source, deposit, amount)
+  def self.transfer_money(user, balance, amount)
+    return false if user.blank? || balance.blank? || amount.blank?
+
     return true if ENV['RAILS_ENV'] == 'test'
 
     # Perform Source->Balance transaction
-    res = self.perform_transfer(source, balance, amount)
-    return false if res.nil?
+    source = user.source_account.dwolla_id
+    deposit = user.deposit_account.dwolla_id
+    response = self.perform_transfer(source, balance, amount)
+    return false if response.blank?
 
     # Wait for webhook indicating that transaction has cleared
-    DwollaTransaction.create(dwolla_id: res,
-                             balance: balance,
-                             source: source,
-                             deposit: deposit,
-                             amount: amount)
+    dt = DwollaTransaction.new(dwolla_id: response,
+                          balance: balance,
+                          source: source,
+                          deposit: deposit,
+                          amount: amount)
+    dt.user = user
+    unless dt.save
+      log_error('DwollaHelper.perform_transfer - Couldn\'t create DwollaTransaction', dt.errors)
+      return false
+    end
+
     true
   end
 

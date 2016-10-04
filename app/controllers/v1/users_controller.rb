@@ -384,7 +384,8 @@ class V1::UsersController < ApplicationController
     account_checking.bank = bank
     account_checking.save!
     @authed_user.source_account = account_checking
-
+    @authed_user.save!
+    @authed_user.dwolla_add_funding_sources
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',
       date: DateTime.current,
@@ -590,7 +591,7 @@ class V1::UsersController < ApplicationController
   def dev_email
     # UserMailer.welcome_email(@authed_user).deliver_later
     # UserMailer.welcome_email(@authed_user).deliver_now
-    # UserMailer.transfer_notification(@authed_user).deliver_now
+    # UserMailer.transfer_notification(@authed_user, "BLAH", "BLAH", 32).deliver_now
     # UserMailer.transfer_complete(@authed_user).deliver_now
     # UserMailer.transfer_cancelled(@authed_user).deliver_now
     # UserMailer.transfer_failed(@authed_user).deliver_now
@@ -603,7 +604,7 @@ class V1::UsersController < ApplicationController
     # UserMailer.documents_rejected(@authed_user).deliver_now
     # UserMailer.verification(@authed_user).deliver_now
     # UserMailer.account_suspended(@authed_user).deliver_now
-    UserMailer.password_reset(@authed_user, 'test').deliver_now
+    # UserMailer.password_reset(@authed_user, 'test').deliver_now
     head :ok
   end
 

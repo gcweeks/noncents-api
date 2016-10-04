@@ -167,11 +167,7 @@ class User < ApplicationRecord
     balance = DwollaHelper.get_balance_funding_source(self)
     return false unless balance
 
-
-    if DwollaHelper.transfer_money(balance,
-                                   self.source_account.dwolla_id,
-                                   self.deposit_account.dwolla_id,
-                                   amount.to_s)
+    if DwollaHelper.transfer_money(self, balance, amount.to_s)
 
       self.fund.deposit!(amount)
       self.yearly_fund().deposit!(amount)

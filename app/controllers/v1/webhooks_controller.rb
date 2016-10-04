@@ -2,6 +2,7 @@ class V1::WebhooksController < ApplicationController
   include WebhookHelper
   include DwollaHelper
   include SlackHelper
+  include UserHelper
 
   before_action :init
   # No webhooks require authentication
@@ -46,13 +47,35 @@ class V1::WebhooksController < ApplicationController
       'customer_bank_transfer_completed' => :transfer_completed
     }
     return head :ok unless response_hash.key? params[:topic]
+    dwolla_id = params[:_links][:customer][:href]
+    dwolla_id.slice!(@@url + 'customers/')
+    if dwolla_id.nil?
+      # Log error
+      error = 'Dwolla ID in webhook: ' + params[:topic] + ' - is nil'
+      logger.warn error
+      SlackHelper.log(error + "\n```" + params.inspect + '```')
+      # Don't retry webhook
+      return head :ok
+    end
+
+    @webhook_user = User.find_by(dwolla_id: dwolla_id)
+    if @webhook_user.nil?
+      # Log error
+      error = 'Cannot find user via dwolla_id - ' + dwolla_id
+      logger.warn error
+      SlackHelper.log(error + "\n```" + params.inspect + '```')
+      # Don't retry webhook
+      return head :ok
+    end
+
     send(response_hash[params[:topic]])
   end
 end
 
 def customer_created
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.welcome_email(user)
+  UserMailer.welcome_email(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def customer_verified
@@ -107,13 +130,22 @@ end
 
 def transfer_created
   transaction_id = params[:resourceId]
-  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  if transaction_id.nil?
+    # Log error
+    error = 'Webhook ' + params[:topic] + ' nil resourceId'
+    logger.warn error
+    SlackHelper.log(error + "\n```" + params.inspect + '```')
+    # Don't retry webhook
+    return head :ok
+  end
+
   # find user by Dwolla ID and send out notification
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.transfer_notification(user,
-                                   user.source_account.name,
-                                   user.deposit_account.name,
-                                   transaction.amount)
+  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  UserMailer.transfer_notification(@webhook_user,
+                                   @webhook_user.source_account.name,
+                                   @webhook_user.deposit_account.name,
+                                   transaction.amount).deliver_now
+  head :ok
 end
 
 def transfer_cancelled
@@ -166,7 +198,6 @@ def transfer_completed
                                user.deposit_account.name,
                                transaction.amount)
   # TODO: Handle res, which should be a Dwolla transaction ID.
-  logger.info "Completed Dwolla webhook transaction."
   logger.info res
   SlackHelper.log("Completed Dwolla webhook transaction.\n```" + res.inspect + '```')
 
