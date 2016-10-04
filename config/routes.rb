@@ -1,6 +1,4 @@
 Rails.application.routes.draw do
-  match '/404' => 'errors#error404', via: [:get, :post, :patch, :delete]
-
   namespace :v1 do
     resources :users, only: [:create]
     resources :vices, only: [:index]
@@ -17,7 +15,6 @@ Rails.application.routes.draw do
     scope 'version' do
       get 'ios' => 'api#version_ios'
     end
-
     scope 'webhooks' do
       get  'twilio' => 'webhooks#twilio'
       get  'plaid'  => 'webhooks#plaid'
@@ -39,6 +36,7 @@ Rails.application.routes.draw do
         post   'refresh_transactions'     => 'users#refresh_transactions'
         post   'register_push_token'      => 'users#register_push_token'
         post   'dwolla'                   => 'users#dwolla'
+        post   'dwolla_document'          => 'users#dwolla_document'
         post   'support'                  => 'users#support'
         post   'dev_refresh_transactions' => 'users#dev_refresh_transactions'
         post   'dev_populate'             => 'users#dev_populate'

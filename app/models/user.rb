@@ -58,10 +58,10 @@ class User < ApplicationRecord
 
   def as_json(options = {})
     json = super({
-      except:  [:token, :password_digest, :dwolla_id, :reset_password_token,
-                :reset_password_sent_at, :confirmation_token,
-                :confirmation_sent_at, :failed_attempts, :unlock_token,
-                :locked_at, :source_account_id, :deposit_account_id]
+      except: [:token, :password_digest, :dwolla_id, :reset_password_token,
+               :reset_password_sent_at, :confirmation_token,
+               :confirmation_sent_at, :failed_attempts, :unlock_token,
+               :locked_at, :source_account_id, :deposit_account_id]
     }.merge(options))
     # Manually call as_json
     json['accounts'] = accounts
@@ -91,23 +91,52 @@ class User < ApplicationRecord
     self.reset_password_token = SecureRandom.base58(6)
   end
 
-  def dwolla_create(ssn, ip)
-    return false unless self.address && ssn && ip
-    res = DwollaHelper.add_customer(self, ssn, ip)
-    if res.nil?
-      error = 'Error in dwolla_create - nil res'
-      logger.warn error
-      SlackHelper.log(error)
-      return false
-    end
-    if res.class != String
-      error = 'Error in dwolla_create - bad res'
-      logger.warn error
-      SlackHelper.log(error + "\n```" + res.inspect + '```')
-      return false
-    end
+  def dwolla_create(ssn, ip, retrying = false)
+    return false if self.address.blank? || ssn.blank? || ip.blank?
 
-    self.dwolla_id = res
+    # Create Dwolla User
+    res = DwollaHelper.add_customer(self, ssn, ip, retrying)
+    # Ensure response is a Dwolla Customer ID
+    return false if res.blank?
+    dwolla_id = res
+
+    # Save Dwolla ID
+    self.dwolla_id = dwolla_id
+    self.save!
+
+    # Get Dwolla Customer status
+    res = DwollaHelper.get_customer_status(dwolla_id)
+    # Ensure response is a status
+    return false if res.blank?
+    status = res
+
+    # Save Dwolla Customer status
+    self.dwolla_status = status
+    self.save!
+    true
+  end
+
+  def dwolla_submit_document(file, type)
+    return false if file.blank? || type.blank?
+
+    # Submit Dwolla Document
+    res = DwollaHelper.submit_document(self, file, type)
+    # Ensure response is a Dwolla Document ID
+    return false if res.blank?
+    document_id = res
+
+    document = DwollaDocument.new(dwolla_id: document_id)
+    document.user = self
+    document.save!
+
+    # Get Dwolla Customer status
+    res = DwollaHelper.get_customer_status(dwolla_id)
+    # Ensure response is a status
+    return false if res.blank?
+    status = res
+
+    # Save Dwolla Customer status
+    self.dwolla_status = status
     self.save!
     true
   end
@@ -120,7 +149,7 @@ class User < ApplicationRecord
     # Add new funding sources
     if self.source_account
       res = DwollaHelper.add_funding_source(self, self.source_account)
-      if res.nil?
+      if res.blank?
         error = 'dwolla_add_funding_sources failed for source account'
         logger.warn error
         SlackHelper.log(error)
@@ -131,7 +160,7 @@ class User < ApplicationRecord
     end
     if self.deposit_account
       res = DwollaHelper.add_funding_source(self, self.deposit_account)
-      if res.nil?
+      if res.blank?
         error = 'dwolla_add_funding_sources failed for deposit account'
         logger.warn error
         SlackHelper.log(error)
@@ -168,7 +197,6 @@ class User < ApplicationRecord
     return false unless balance
 
     if DwollaHelper.transfer_money(self, balance, amount.to_s)
-
       self.fund.deposit!(amount)
       self.yearly_fund().deposit!(amount)
       return true
@@ -182,7 +210,7 @@ class User < ApplicationRecord
   def yearly_fund
     year = Date.current.year # e.g. 2016 (Integer)
     yearly_fund = self.yearly_funds.find_by(year: year)
-    return yearly_fund unless yearly_fund.nil?
+    return yearly_fund unless yearly_fund.blank?
     # No yearly_fund model found matching this year, create one
     yearly_fund = self.yearly_funds.new(year: year)
     yearly_fund.save!
@@ -241,7 +269,7 @@ class User < ApplicationRecord
                         plaid_transaction.category_hierarchy[1],
                         plaid_transaction.category_hierarchy[2])
         # Skip all Transactions that aren't classified as a particular Vice
-        next if vice.nil?
+        next if vice.blank?
         next unless self.vices.include? vice
         # Create Transaction
         transaction = Transaction.from_plaid(plaid_transaction)

@@ -95,7 +95,7 @@ class V1::UsersController < ApplicationController
     if ENV['RAILS_ENV'] == 'production'
       domain = ENV['DOMAIN']
       raise InternalServerError if domain.blank?
-      options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+      options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
     end
     begin
       plaid_user = if params[:type] == 'bofa' || params[:type] == 'chase'
@@ -144,7 +144,7 @@ class V1::UsersController < ApplicationController
         if ENV['RAILS_ENV'] == 'production'
           domain = ENV['DOMAIN']
           raise InternalServerError if domain.blank?
-          options[:webhook] = 'https://' + domain + '/v1/plaid_callback'
+          options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
         end
         plaid_user.mfa_step(params[:answer], options: options)
       elsif !params[:mask].blank?
@@ -274,14 +274,14 @@ class V1::UsersController < ApplicationController
   end
 
   def dwolla
-    # Validate payload
+    # Validate payload, optionally including storing address
     errors = {}
     unless params[:ssn]
       errors[:ssn] = ['is required']
     end
     addr = @authed_user.address
     unless addr
-      if params[:address]
+      if params[:address].present?
         addr = Address.new(address_params)
         @authed_user.address = addr
       else
@@ -289,18 +289,51 @@ class V1::UsersController < ApplicationController
       end
     end
     raise BadRequest.new(errors) unless errors.blank?
-
     if params[:address]
       raise UnprocessableEntity.new(addr.errors) unless addr.save
     end
-
     @authed_user.save!
 
+    # Whether to create or retry creation of a Dwolla Customer object
+    retrying = params[:retry].present?
     # User's Address will be used in User.dwolla_create
-    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip)
+    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip, retrying)
       raise InternalServerError
     end
-    head :ok
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
+  end
+
+  def dwolla_document
+    # Validate payload
+    errors = {}
+    document_types = ['passport', 'license', 'idCard']
+    if params[:type].blank?
+      errors[:type] = ['is required']
+    elsif !document_types.include?(params[:type])
+      errors[:type] = ['must be one of "passport", "license", or "idCard"']
+    end
+    if params[:file].blank?
+      errors[:file] = ['is required']
+    elsif params[:file].class != ActionDispatch::Http::UploadedFile
+      errors[:file] = ['is uploaded incorrectly']
+    else
+      filetypes = ['.jpg', '.jpeg', '.png', '.tif', '.pdf']
+      extension = params[:file].original_filename[/\.[A-Za-z]{3,4}$/]
+      unless filetypes.include?(extension)
+        errors[:file] = ['must be one of: ' + filetypes.join(', ')]
+      end
+    end
+    raise BadRequest.new(errors) unless errors.blank?
+
+    file = Faraday::UploadIO.new params[:file].path, params[:file].content_type
+    unless @authed_user.dwolla_submit_document(file, params[:type])
+      raise InternalServerError
+    end
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   def support
@@ -386,6 +419,7 @@ class V1::UsersController < ApplicationController
     @authed_user.source_account = account_checking
     @authed_user.save!
     @authed_user.dwolla_add_funding_sources
+
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',
       date: DateTime.current,
