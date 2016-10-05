@@ -26,15 +26,15 @@ gem 'twilio-ruby', '~> 4.0'
 # Dwolla
 gem 'dwolla_v2', '~> 1.1'
 # AWS SES
-gem "aws-ses", "~> 0.6.0", :require => 'aws/ses'
-# Rate limiting
-# gem 'rack-throttle', '0.4.0'
+gem 'aws-ses', '~> 0.6.0', :require => 'aws/ses'
 # Rack Attack
 gem 'rack-attack'
 # Slack Notifications
 gem 'slack-notifier'
 # Exception Notifications
 gem 'exception_notification'
+# attr_encrypted
+gem 'attr_encrypted'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
