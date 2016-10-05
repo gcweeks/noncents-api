@@ -73,39 +73,64 @@ class V1::WebhooksController < ApplicationController
 end
 
 def customer_created
-  UserMailer.welcome_email(@webhook_user).deliver_now
-
+  if @webhook_user.dwolla_status == 'verified'
+    UserMailer.welcome_email(@webhook_user).deliver_now
+  end
   head :ok
 end
 
 def customer_verified
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.verification(user)
+  @webhook_user.dwolla_status = 'verified'
+  @webhook_user.save!
+
+  UserMailer.verification(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def customer_suspended
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.account_suspended(user)
+  @webhook_user.dwolla_status = 'suspended'
+  @webhook_user.save!
+  UserMailer.account_suspended(@webhook_user).deliver_now
+
+  head :ok
+end
+
+def reverification_needed
+  @webhook_user.dwolla_status = 'retry'
+  @webhook_user.save!
+
+  head :ok
 end
 
 def verification_document_needed
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.documents_needed(user)
+  @webhook_user.dwolla_status = 'document'
+  @webhook_user.save!
+
+  UserMailer.documents_needed(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def verification_document_uploaded
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.documents_uploaded(user)
+  UserMailer.documents_uploaded(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def verification_document_approved
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.documents_approved(user)
+  @webhook_user.dwolla_status = 'verified'
+  @webhook_user.save!
+
+  UserMailer.documents_approved(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def verification_document_failed
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.documents_rejected(user)
+  UserMailer.documents_rejected(@webhook_user).deliver_now
+
+  head :ok
 end
 
 def funding_source_added
@@ -119,13 +144,39 @@ def funding_source_unverified
 end
 
 def funding_source_removed
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.funding_removed(user)
+  funding_source = params[:_links][:resource][:href]
+  funding_source.slice!(@@url + 'funding-sources/')
+  acct = Account.find_by(dwolla_id: funding_source)
+  if acct.nil?
+    # Log error
+    error = params[:topic] + '- Cannot find source_account that was removed with dwolla_id - ' + funding_source
+    logger.warn error
+    SlackHelper.log(error + "\n```" + params.inspect + '```')
+    # Don't retry webhook
+    return head :ok
+  end
+
+  UserMailer.funding_removed(@webhook_user, acct).deliver_now
+
+  head :ok
 end
 
 def funding_source_verified
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.funding_added(user)
+  funding_source = params[:_links][:resource][:href]
+  funding_source.slice!(@@url + 'funding-sources/')
+  acct = Account.find_by(dwolla_id: funding_source)
+  if acct.nil?
+    # Log error
+    error = params[:topic] + '- Cannot find source_account that was verified with dwolla_id - ' + funding_source
+    logger.warn error
+    SlackHelper.log(error + "\n```" + params.inspect + '```')
+    # Don't retry webhook
+    return head :ok
+  end
+
+  UserMailer.funding_added(@webhook_user, acct).deliver_now
+
+  head :ok
 end
 
 def transfer_created
@@ -150,31 +201,49 @@ end
 
 def transfer_cancelled
   transaction_id = params[:resourceId]
-  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  if transaction_id.nil?
+    # Log error
+    error = 'Webhook ' + params[:topic] + ' nil resourceId'
+    logger.warn error
+    SlackHelper.log(error + "\n```" + params.inspect + '```')
+    # Don't retry webhook
+    return head :ok
+  end
 
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.transfer_cancelled(user,
-                                user.source_account.name,
-                                user.deposit_account.name,
-                                transaction.amount)
+  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  UserMailer.transfer_cancelled(@webhook_user,
+                                @webhook_user.source_account.name,
+                                @webhook_user.deposit_account.name,
+                                transaction.amount).deliver_now
+
+  head :ok
 end
 
 def transfer_failed
   transaction_id = params[:resourceId]
-  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  if transaction_id.nil?
+    # Log error
+    error = 'Webhook ' + params[:topic] + ' nil resourceId'
+    logger.warn error
+    SlackHelper.log(error + "\n```" + params.inspect + '```')
+    # Don't retry webhook
+    return head :ok
+  end
 
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.transfer_failed(user,
-                             user.source_account.name,
-                             user.deposit_account.name,
-                             transaction.amount)
+  transaction = DwollaTransaction.find_by(dwolla_id: transaction_id)
+  UserMailer.transfer_failed(@webhook_user,
+                             @webhook_user.source_account.name,
+                             @webhook_user.deposit_account.name,
+                             transaction.amount).deliver_now
+
+  head :ok
 end
 
 def transfer_completed
   transaction_id = params[:resourceId]
   if transaction_id.nil?
     # Log error
-    error = 'Webhook customer_bank_transfer_completed - nil resourceId'
+    error = 'Webhook ' + params[:topic] + ' nil resourceId'
     logger.warn error
     SlackHelper.log(error + "\n```" + params.inspect + '```')
     # Don't retry webhook
@@ -192,11 +261,10 @@ def transfer_completed
                                       transaction.deposit,
                                       transaction.amount)
   # Use dwolla ID in webhook to lookup user account
-  user = User.find_by(dwolla_id: params[:id])
-  UserMailer.transfer_complete(user,
-                               user.source_account.name,
-                               user.deposit_account.name,
-                               transaction.amount)
+  UserMailer.transfer_complete(@webhook_user,
+                               @webhook_user.source_account.name,
+                               @webhook_user.deposit_account.name,
+                               transaction.amount).deliver_now
   # TODO: Handle res, which should be a Dwolla transaction ID.
   logger.info res
   SlackHelper.log("Completed Dwolla webhook transaction.\n```" + res.inspect + '```')

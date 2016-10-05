@@ -81,20 +81,20 @@ class UserMailer < ApplicationMailer
     mail(to: @user.email, subject: 'Transfer Failed')
   end
 
-  def funding_added(user)
+  def funding_added(user, funding_source)
     @user = user
-    @institution = user.source_account.institution
-    @source = user.source_account.name
+    @institution = funding_source.institution
+    @source = funding_source.name
     @date = DateTime.now.strftime("%B %d")
     attachments.inline['logo.png'] = File.read('./app/assets/images/logo.png')
     attachments.inline['divider.png'] = File.read('./app/assets/images/divider.png')
     mail(to: @user.email, subject: 'Added a Funding Source 💵 ➡ 🏦')
   end
 
-  def funding_removed(user)
+  def funding_removed(user, funding_source)
     @user = user
-    @institution = user.source_account.institution
-    @source = user.source_account.name
+    @institution = funding_source.institution
+    @source = funding_source.name
     @date = DateTime.now.strftime("%B %d")
     attachments.inline['logo.png'] = File.read('./app/assets/images/logo.png')
     attachments.inline['divider.png'] = File.read('./app/assets/images/divider.png')
