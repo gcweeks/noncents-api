@@ -5,6 +5,7 @@ class Address < ApplicationRecord
   validates :city, presence: true
   validates :state, presence: true
   validates :zip, presence: true
+  validates :user, presence: true
 
   def as_json(options = {})
     json = super({
