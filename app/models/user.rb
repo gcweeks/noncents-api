@@ -245,6 +245,10 @@ class User < ApplicationRecord
         SlackHelper.log("Plaid Error\n`" + e.code.to_s + "\n```" + e.message +
           "```\n```" + e.resolve + "```\n```" + status + "```")
         next
+      rescue => e
+        logger.warn e.inspect
+        SlackHelper.log('User.refresh_transactions error: ```' +
+          e.inspect + '```')
       end
       # Push Transaction if it is from an Account that the User has added and
       # matches one of the User's Vices.
