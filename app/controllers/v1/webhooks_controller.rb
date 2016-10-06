@@ -68,22 +68,31 @@ class V1::WebhooksController < ApplicationController
       return head :ok
     end
 
+    @dwolla_url = @@url
     send(response_hash[params[:topic]])
   end
 end
 
 def customer_created
-  if @webhook_user.dwolla_status == 'verified'
-    UserMailer.welcome_email(@webhook_user).deliver_now
-  end
+  return head :ok unless @webhook_user.dwolla_status != 'verified'
+  UserMailer.welcome_need_info(@webhook_user).deliver_now
+
   head :ok
 end
 
 def customer_verified
+  dt = DateTime.parse params[:timestamp]
+
+  # if the verification webhook comes in over an hour later, send
+  # seperate verification email, not combined with welcome email
+  if (@webhook_user.dwolla_verified_at.utc + 1.hour) > dt
+    UserMailer.verification(@webhook_user).deliver_now
+  else
+    UserMailer.welcome_email(@webhook_user).deliver_now
+  end
+
   @webhook_user.dwolla_status = 'verified'
   @webhook_user.save!
-
-  UserMailer.verification(@webhook_user).deliver_now
 
   head :ok
 end
@@ -134,18 +143,17 @@ def verification_document_failed
 end
 
 def funding_source_added
-  # user = User.find_by(dwolla_id: params[:id])
-  # UserMailer.funding_added(user)
+  # funding sources are verfied as they're linked through plaid
+  head :ok
 end
 
 def funding_source_unverified
-  # user = User.find_by(dwolla_id: params[:id])
-  # UserMailer.funding_removed(user)
+  head :ok
 end
 
 def funding_source_removed
   funding_source = params[:_links][:resource][:href]
-  funding_source.slice!(@@url + 'funding-sources/')
+  funding_source.slice!(@dwolla_url + 'funding-sources/')
   acct = Account.find_by(dwolla_id: funding_source)
   if acct.nil?
     # Log error
@@ -163,7 +171,7 @@ end
 
 def funding_source_verified
   funding_source = params[:_links][:resource][:href]
-  funding_source.slice!(@@url + 'funding-sources/')
+  funding_source.slice!(@dwolla_url + 'funding-sources/')
   acct = Account.find_by(dwolla_id: funding_source)
   if acct.nil?
     # Log error
@@ -174,7 +182,10 @@ def funding_source_verified
     return head :ok
   end
 
-  UserMailer.funding_added(@webhook_user, acct).deliver_now
+  # don't notify if it was a deposit account that was added
+  if acct.dwolla_id == @webhook_user.source_account.dwolla_id
+    UserMailer.funding_added(@webhook_user, acct).deliver_now
+  end
 
   head :ok
 end
