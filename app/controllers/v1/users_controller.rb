@@ -625,7 +625,7 @@ class V1::UsersController < ApplicationController
   def dev_email
     # UserMailer.welcome_email(@authed_user).deliver_later
     # UserMailer.welcome_email(@authed_user).deliver_now
-    # UserMailer.transfer_notification(@authed_user).deliver_now
+    # UserMailer.transfer_notification(@authed_user, "BLAH", "BLAH", 32).deliver_now
     # UserMailer.transfer_complete(@authed_user).deliver_now
     # UserMailer.transfer_cancelled(@authed_user).deliver_now
     # UserMailer.transfer_failed(@authed_user).deliver_now
@@ -638,7 +638,7 @@ class V1::UsersController < ApplicationController
     # UserMailer.documents_rejected(@authed_user).deliver_now
     # UserMailer.verification(@authed_user).deliver_now
     # UserMailer.account_suspended(@authed_user).deliver_now
-    UserMailer.password_reset(@authed_user, 'test').deliver_now
+    # UserMailer.password_reset(@authed_user, 'test').deliver_now
     head :ok
   end
 

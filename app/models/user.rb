@@ -110,8 +110,9 @@ class User < ApplicationRecord
     return false if res.blank?
     status = res
 
-    # Save Dwolla Customer status
+    # Save Dwolla Customer status and timestamp
     self.dwolla_status = status
+    self.dwolla_verified_at = DateTime.current
     self.save!
     true
   end
