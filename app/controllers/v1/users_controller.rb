@@ -78,18 +78,28 @@ class V1::UsersController < ApplicationController
 
   # GET users/me/account_connect
   def account_connect
-    unless params[:username]
-      errors = { username: ['is required'] }
-      raise BadRequest.new(errors)
+    errors = []
+    errors[:username] = ['is required'] if params[:username].blank?
+    errors[:password] = ['is required'] if params[:password].blank?
+    if params[:type].blank?
+      errors[:type] = ['is required']
+    else
+      types = [
+        'bbt', 'bofa', 'capone360', 'schwab', 'chase', 'citi', 'fidelity',
+        'nfcu', 'pnc', 'suntrust', 'td', 'us', 'usaa', 'wells'
+      ]
+      unless types.include?(params[:type])
+        errors[:type] = [
+          'must be one of: ' + types.join(', '),
+          'cannot be ' + params[:type].to_s
+        ]
+      end
+      if params[:type] = 'usaa'
+        errors[:pin] = ['is required for usaa'] if params[:pin].blank?
+      end
     end
-    unless params[:password]
-      errors = { password: ['is required'] }
-      raise BadRequest.new(errors)
-    end
-    unless params[:type]
-      errors = { type: ['is required'] }
-      raise BadRequest.new(errors)
-    end
+    raise BadRequest.new(errors) if errors.present?
+
     # Get Plaid user
     options = { login_only: true }
     if ENV['RAILS_ENV'] == 'production'
@@ -98,27 +108,14 @@ class V1::UsersController < ApplicationController
       options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
     end
     begin
-      plaid_user = if params[:type] == 'bofa' || params[:type] == 'chase'
-                     options[:list] = true
-                     Plaid::User.create(:connect,
-                                        params[:type],
-                                        params[:username],
-                                        params[:password],
-                                        options: options)
-                   elsif params[:type] == 'usaa' && params[:pin]
-                     Plaid::User.create(:connect,
-                                        params[:type],
-                                        params[:username],
-                                        params[:password],
-                                        pin: params[:pin],
-                                        options: options)
-                   else
-                     Plaid::User.create(:connect,
-                                        params[:type],
-                                        params[:username],
-                                        params[:password],
-                                        options: options)
-                   end
+      options[:list] = true if ['bofa', 'chase'].include?(params[:type])
+      pin = (params[:type] == 'usaa') ? params[:pin] : nil
+      plaid_user = Plaid::User.create(:connect,
+                                      params[:type],
+                                      params[:username],
+                                      params[:password],
+                                      pin: pin,
+                                      options: options)
     rescue Plaid::PlaidError => e
       raise get_plaid_error(e)
     end
@@ -623,22 +620,7 @@ class V1::UsersController < ApplicationController
   end
 
   def dev_email
-    # UserMailer.welcome_email(@authed_user).deliver_later
     # UserMailer.welcome_email(@authed_user).deliver_now
-    # UserMailer.transfer_notification(@authed_user, "BLAH", "BLAH", 32).deliver_now
-    # UserMailer.transfer_complete(@authed_user).deliver_now
-    # UserMailer.transfer_cancelled(@authed_user).deliver_now
-    # UserMailer.transfer_failed(@authed_user).deliver_now
-    # UserMailer.funding_added(@authed_user).deliver_now
-    # UserMailer.funding_removed(@authed_user).deliver_now
-    # UserMailer.welcome_need_info(@authed_user).deliver_now
-    # UserMailer.documents_needed(@authed_user).deliver_now
-    # UserMailer.documents_uploaded(@authed_user).deliver_now
-    # UserMailer.documents_approved(@authed_user).deliver_now
-    # UserMailer.documents_rejected(@authed_user).deliver_now
-    # UserMailer.verification(@authed_user).deliver_now
-    # UserMailer.account_suspended(@authed_user).deliver_now
-    # UserMailer.password_reset(@authed_user, 'test').deliver_now
     head :ok
   end
 
