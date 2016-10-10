@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161006163327) do
+ActiveRecord::Schema.define(version: 20161010192520) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -73,6 +73,14 @@ ActiveRecord::Schema.define(version: 20161006163327) do
     t.datetime "created_at",   null: false
     t.datetime "updated_at",   null: false
     t.index ["user_id"], name: "index_banks_on_user_id", using: :btree
+  end
+
+  create_table "dwolla_documents", force: :cascade do |t|
+    t.string   "dwolla_id"
+    t.uuid     "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_dwolla_documents_on_user_id", using: :btree
   end
 
   create_table "dwolla_token_stores", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
