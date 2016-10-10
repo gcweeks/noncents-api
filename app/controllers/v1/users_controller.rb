@@ -78,7 +78,7 @@ class V1::UsersController < ApplicationController
 
   # GET users/me/account_connect
   def account_connect
-    errors = []
+    errors = {}
     errors[:username] = ['is required'] if params[:username].blank?
     errors[:password] = ['is required'] if params[:password].blank?
     if params[:type].blank?
@@ -94,7 +94,7 @@ class V1::UsersController < ApplicationController
           'cannot be ' + params[:type].to_s
         ]
       end
-      if params[:type] = 'usaa'
+      if params[:type] == 'usaa'
         errors[:pin] = ['is required for usaa'] if params[:pin].blank?
       end
     end
