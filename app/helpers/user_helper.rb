@@ -10,7 +10,7 @@ module UserHelper
     true
   end
 
-  def render_mfa_or_populate(user, plaid_user)
+  def mfa_or_populate(user, plaid_user)
     if plaid_user.mfa?
       # MFA
       ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'

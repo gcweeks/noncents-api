@@ -76,21 +76,30 @@ class V1::UsersController < ApplicationController
     render json: addr.errors, status: :unprocessable_entity
   end
 
-  # GET users/me/account_connect
-  def account_connect
+  # POST users/me/plaid
+  def plaid
     errors = {}
     errors[:username] = ['is required'] if params[:username].blank?
     errors[:password] = ['is required'] if params[:password].blank?
+    if params[:product].blank?
+      errors[:product] = ['is required']
+    else
+      products = %w(connect auth)
+      unless products.include?(params[:product])
+        errors[:product] = ['must be one of: ' + products.join(', ')]
+      end
+    end
     if params[:type].blank?
       errors[:type] = ['is required']
     else
-      types = [
-        'bbt', 'bofa', 'capone360', 'schwab', 'chase', 'citi', 'fidelity',
-        'nfcu', 'pnc', 'suntrust', 'td', 'us', 'usaa', 'wells'
-      ]
+      auth_types = %w(bbt bofa capone360 schwab chase citi fidelity nfcu pnc
+                      suntrust td us usaa wells)
+      connect_types = %w(amex bbt bofa chase citi nfcu suntrust td us usaa
+                         wells)
+      types = (params[:product] == 'auth') ? auth_types : connect_types
       unless types.include?(params[:type])
         errors[:type] = [
-          'must be one of: ' + types.join(', '),
+          params[:product]+ ' type must be one of: ' + types.join(', '),
           'cannot be ' + params[:type].to_s
         ]
       end
@@ -100,17 +109,25 @@ class V1::UsersController < ApplicationController
     end
     raise BadRequest.new(errors) if errors.present?
 
-    # Get Plaid user
-    options = { login_only: true }
+    product = params[:product].to_sym
+    options = {}
+    # 'login_only' gets only the credentials for a Plaid Connect user, omitting
+    # the user's transactions.
+    options[:login_only] = true if params[:product] == 'connect'
+    # 'list' lists the available destinations an MFA Code can be sent
+    options[:list] = true if params[:type] == 'chase'
+    # USAA requires a pin for authentication
+    pin = (params[:type] == 'usaa') ? params[:pin] : nil
+    # Webhooks for transactions and account issues
     if ENV['RAILS_ENV'] == 'production'
       domain = ENV['DOMAIN']
       raise InternalServerError if domain.blank?
       options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
     end
+
+    # Create Plaid user
     begin
-      options[:list] = true if ['bofa', 'chase'].include?(params[:type])
-      pin = (params[:type] == 'usaa') ? params[:pin] : nil
-      plaid_user = Plaid::User.create(:connect,
+      plaid_user = Plaid::User.create(product,
                                       params[:type],
                                       params[:username],
                                       params[:password],
@@ -122,46 +139,134 @@ class V1::UsersController < ApplicationController
 
     set_bank(@authed_user, params[:type], plaid_user.access_token)
 
-    ret = render_mfa_or_populate(@authed_user, plaid_user)
+    ret = mfa_or_populate(@authed_user, plaid_user)
     raise ret if ret.class <= Error
     render json: ret, status: :ok
   end
 
-  # GET users/me/account_mfa
-  def account_mfa
-    unless params[:access_token]
-      errors = { access_token: ['is required'] }
-      raise BadRequest.new(errors)
-    end
-
-    begin
-      plaid_user = Plaid::User.load(:connect, params[:access_token])
-      if !params[:answer].blank?
-        options = { login_only: true }
-        if ENV['RAILS_ENV'] == 'production'
-          domain = ENV['DOMAIN']
-          raise InternalServerError if domain.blank?
-          options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
-        end
-        plaid_user.mfa_step(params[:answer], options: options)
-      elsif !params[:mask].blank?
-        plaid_user.mfa_step(send_method: { mask: params[:mask] })
-      elsif !params[:type].blank?
-        plaid_user.mfa_step(send_method: { type: params[:type] })
-      else
-        errors = {
-          answer: ['is required (unless selecting MFA method)'],
-          mask: ['can be submitted instead of answer to select MFA method'],
-          type: ['can be submitted instead of answer to select MFA method']
-        }
-        raise BadRequest.new(errors)
+  # POST users/me/plaid_mfa
+  def plaid_mfa
+    errors = {}
+    errors[:access_token] = ['is required'] if params[:access_token].blank?
+    if params[:product].blank?
+      errors[:product] = ['is required']
+    else
+      products = %w(connect auth)
+      unless products.include?(params[:product])
+        errors[:product] = ['must be one of: ' + products.join(', ')]
       end
+    end
+    if params[:answer].blank? && params[:mask].blank? && params[:type].blank?
+      errors[:answer] = ['is required (unless selecting MFA method)']
+      errors[:mask] = ['can be submitted instead of answer to select MFA method']
+      errors[:type] = ['can be submitted instead of answer to select MFA method']
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    product = params[:product].to_sym
+    begin
+      plaid_user = Plaid::User.load(product, params[:access_token])
     rescue Plaid::PlaidError => e
       raise get_plaid_error(e)
     end
-    ret = render_mfa_or_populate(@authed_user, plaid_user)
+
+    if params[:answer].present?
+      options = {}
+      # 'login_only' gets only the credentials for a Plaid Connect user, omitting
+      # the user's transactions.
+      options[:login_only] = true if params[:product] == 'connect'
+      # Webhooks for transactions and account issues
+      if ENV['RAILS_ENV'] == 'production'
+        domain = ENV['DOMAIN']
+        raise InternalServerError if domain.blank?
+        options[:webhook] = 'https://' + domain + '/v1/webhooks/plaid'
+      end
+
+      begin
+        plaid_user.mfa_step(params[:answer], options: options)
+      rescue Plaid::PlaidError => e
+        raise get_plaid_error(e)
+      end
+    else # Selecting send_method for MFA code
+      method = if params[:mask].present?
+                 { mask: params[:mask] }
+               else # type
+                 { type: params[:type] }
+               end
+
+      begin
+        plaid_user.mfa_step(send_method: method, options: options)
+      rescue Plaid::PlaidError => e
+        raise get_plaid_error(e)
+      end
+    end
+
+    ret = mfa_or_populate(@authed_user, plaid_user)
     raise ret if ret.class <= Error
     render json: ret, status: :ok
+  end
+
+  def dwolla
+    # Validate payload, optionally including storing address
+    errors = {}
+    unless params[:ssn]
+      errors[:ssn] = ['is required']
+    end
+    addr = @authed_user.address
+    unless addr
+      if params[:address].present?
+        addr = Address.new(address_params)
+        @authed_user.address = addr
+      else
+        errors[:address] = ['is required']
+      end
+    end
+    raise BadRequest.new(errors) unless errors.blank?
+    if params[:address]
+      raise UnprocessableEntity.new(addr.errors) unless addr.save
+    end
+    @authed_user.save!
+
+    # Whether to create or retry creation of a Dwolla Customer object
+    retrying = params[:retry].present?
+    # User's Address will be used in User.dwolla_create
+    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip, retrying)
+      raise InternalServerError
+    end
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
+  end
+
+  def dwolla_document
+    # Validate payload
+    errors = {}
+    document_types = %w(passport license idCard)
+    if params[:type].blank?
+      errors[:type] = ['is required']
+    elsif document_types.exclude?(params[:type])
+      errors[:type] = ['must be one of: ' + document_types.join(', ')]
+    end
+    if params[:file].blank?
+      errors[:file] = ['is required']
+    elsif params[:file].class != ActionDispatch::Http::UploadedFile
+      errors[:file] = ['is uploaded incorrectly']
+    else
+      filetypes = %w(.jpg .jpeg .png .tif .pdf)
+      extension = params[:file].original_filename[/\.[A-Za-z]{3,4}$/]
+      unless filetypes.include?(extension)
+        errors[:file] = ['must be one of: ' + filetypes.join(', ')]
+      end
+    end
+    raise BadRequest.new(errors) unless errors.blank?
+
+    file = Faraday::UploadIO.new params[:file].path, params[:file].content_type
+    unless @authed_user.dwolla_submit_document(file, params[:type])
+      raise InternalServerError
+    end
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   # PUT users/me/accounts
@@ -173,7 +278,7 @@ class V1::UsersController < ApplicationController
       validate_tracking_accounts_payload(params[:tracking])
     errors = e1.merge(e2) { |k, o, n| o + n } # Key, old, new
     if source_account.nil? && deposit_account.nil? && tracking_accounts.blank?
-      errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
+      errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
     end
     unless errors.blank?
       raise BadRequest.new(errors)
@@ -182,20 +287,17 @@ class V1::UsersController < ApplicationController
     # Set Source/Deposit Accounts
     if source_account || deposit_account
       if @authed_user.dwolla_id
+        types = %w(savings checking)
         if source_account
-          if source_account.account_subtype != 'savings' &&
-             source_account.account_subtype != 'checking'
-
-            errors[:source] = ['must be of type "savings" or "checking"']
+          if types.exclude?(source_account.account_subtype)
+            errors[:source] = ['type must be one of: ' + types.join(', ')]
           else
             @authed_user.source_account = source_account
           end
         end
         if deposit_account
-          if deposit_account.account_subtype != 'savings' &&
-             deposit_account.account_subtype != 'checking'
-
-            errors[:deposit] = ['must be of type "savings" or "checking"']
+          if types.exclude?(deposit_account.account_subtype)
+            errors[:deposit] = ['type must be one of: ' + types.join(', ')]
           else
             @authed_user.deposit_account = deposit_account
           end
@@ -203,7 +305,7 @@ class V1::UsersController < ApplicationController
       else
         errors[:general] = ['User is not yet verified with Dwolla']
       end
-      raise BadRequest.new(errors) unless errors.blank?
+      raise BadRequest.new(errors) if errors.present?
       @authed_user.save!
       @authed_user.dwolla_add_funding_sources
     end
@@ -264,73 +366,10 @@ class V1::UsersController < ApplicationController
       raise BadRequest.new(errors)
     end
     unless register_token_fcm(@authed_user, params[:token])
-      errors = { 'status' => 'failed to register' }
+      errors = { status: 'failed to register' }
       raise InternalServerError.new(errors)
     end
-    render json: { 'status' => 'registered' }, status: :ok
-  end
-
-  def dwolla
-    # Validate payload, optionally including storing address
-    errors = {}
-    unless params[:ssn]
-      errors[:ssn] = ['is required']
-    end
-    addr = @authed_user.address
-    unless addr
-      if params[:address].present?
-        addr = Address.new(address_params)
-        @authed_user.address = addr
-      else
-        errors[:address] = ['is required']
-      end
-    end
-    raise BadRequest.new(errors) unless errors.blank?
-    if params[:address]
-      raise UnprocessableEntity.new(addr.errors) unless addr.save
-    end
-    @authed_user.save!
-
-    # Whether to create or retry creation of a Dwolla Customer object
-    retrying = params[:retry].present?
-    # User's Address will be used in User.dwolla_create
-    unless @authed_user.dwolla_create(params[:ssn], request.remote_ip, retrying)
-      raise InternalServerError
-    end
-
-    @authed_user.reload
-    render json: @authed_user, status: :ok
-  end
-
-  def dwolla_document
-    # Validate payload
-    errors = {}
-    document_types = ['passport', 'license', 'idCard']
-    if params[:type].blank?
-      errors[:type] = ['is required']
-    elsif !document_types.include?(params[:type])
-      errors[:type] = ['must be one of "passport", "license", or "idCard"']
-    end
-    if params[:file].blank?
-      errors[:file] = ['is required']
-    elsif params[:file].class != ActionDispatch::Http::UploadedFile
-      errors[:file] = ['is uploaded incorrectly']
-    else
-      filetypes = ['.jpg', '.jpeg', '.png', '.tif', '.pdf']
-      extension = params[:file].original_filename[/\.[A-Za-z]{3,4}$/]
-      unless filetypes.include?(extension)
-        errors[:file] = ['must be one of: ' + filetypes.join(', ')]
-      end
-    end
-    raise BadRequest.new(errors) unless errors.blank?
-
-    file = Faraday::UploadIO.new params[:file].path, params[:file].content_type
-    unless @authed_user.dwolla_submit_document(file, params[:type])
-      raise InternalServerError
-    end
-
-    @authed_user.reload
-    render json: @authed_user, status: :ok
+    render json: { status: 'registered' }, status: :ok
   end
 
   def support
@@ -639,6 +678,9 @@ class V1::UsersController < ApplicationController
 
   def address_params
     params.require(:address).permit(:line1, :line2, :city, :state, :zip)
+  end
+
+  def plaid_login()
   end
 
   def validate_deduction_accounts_payload(source, deposit)
