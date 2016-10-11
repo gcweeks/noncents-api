@@ -93,7 +93,7 @@ module DwollaHelper
       return nil
     end
 
-    route = 'customers/' + user.dwolla_id
+    route = 'customers/' + user.dwolla_id + '/documents'
     response = self.post(route, file: file, documentType: type)
 
     if response.class == DwollaV2::Response
