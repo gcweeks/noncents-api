@@ -222,6 +222,10 @@ class User < ApplicationRecord
     # Get transactions from Plaid. Plaid delivers transactions on a per-bank
     # basis, but they allow filtering by account which saves some time.
     self.banks.each do |bank|
+      # Skip fetching transactions for bank accounts that haven't been
+      # authorized by Plaid to provide them.
+      next unless bank.plaid_connect
+
       # Get Plaid model
       begin
         plaid_user = Plaid::User.load(:connect, bank.access_token)
@@ -251,6 +255,7 @@ class User < ApplicationRecord
         SlackHelper.log('User.refresh_transactions error: ```' +
           e.inspect + '```')
       end
+
       # Push Transaction if it is from an Account that the User has added and
       # matches one of the User's Vices.
       transactions.each do |plaid_transaction|

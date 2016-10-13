@@ -1,16 +1,17 @@
 module UserHelper
   include ErrorHelper
-  def set_bank(user, type, access_token)
+
+  def mfa_or_populate(user, plaid_user, product, bank_name = nil)
     # Find existing Bank or create new one
-    bank = user.banks.find_by(access_token: access_token)
+    bank = user.banks.find_by(access_token: plaid_user.access_token)
     unless bank
-      bank = user.banks.new(name: type, access_token: access_token)
+      raise InternalServerError unless bank_name
+      bank = user.banks.new(name: bank_name,
+                            access_token: plaid_user.access_token)
+      raise InternalServerError.new(bank.errors) unless bank.valid?
       bank.save!
     end
-    true
-  end
 
-  def mfa_or_populate(user, plaid_user)
     if plaid_user.mfa?
       # MFA
       ret = plaid_user.instance_values.slice 'access_token', 'mfa_type', 'mfa'
@@ -21,7 +22,17 @@ module UserHelper
     ret = populate_user_accounts(user, plaid_user)
     # 'ret' will either be a successfully saved User model or an ActiveRecord
     # error hash.
-    return InternalServerError.new(ret) unless ret.is_a?(User)
+    raise InternalServerError.new(ret) unless ret.is_a?(User)
+
+    # Store success state in Bank model
+    if product == 'auth'
+      bank.plaid_auth = true
+    else # connect
+      bank.plaid_connect = true
+    end
+    raise InternalServerError.new(bank.errors) unless bank.valid?
+    bank.save!
+
     ret
   end
 

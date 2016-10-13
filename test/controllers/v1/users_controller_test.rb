@@ -352,7 +352,16 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['address']['zip'], @user.address.zip
   end
 
+  test 'should auth with plaid' do
+    # product = 'auth'
+    should_create_plaid('auth')
+  end
+
   test 'should connect with plaid' do
+    should_create_plaid('connect')
+  end
+
+  def should_create_plaid(product)
     username = 'plaid_test'
     password = 'plaid_good'
     type = 'chase'
@@ -367,18 +376,18 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     post 'me/plaid', headers: @headers, params: {
       username: username,
       password: password,
-      product: 'connect'
+      product: product
     }
     assert_response :bad_request
     post 'me/plaid', headers: @headers, params: {
       password: password,
-      product: 'connect',
+      product: product,
       type: type
     }
     assert_response :bad_request
     post 'me/plaid', headers: @headers, params: {
       username: username,
-      product: 'connect',
+      product: product,
       type: type
     }
     assert_response :bad_request
@@ -396,7 +405,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     post 'me/plaid', headers: @headers, params: {
       username: username,
       password: password,
-      product: 'connect',
+      product: product,
       type: type
     }
     assert_response :success
@@ -405,6 +414,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     # Bank saved for reference
     assert_equal @user.banks.size, 1
+    assert_equal @user.banks[0].plaid_auth, false
+    assert_equal @user.banks[0].plaid_connect, false
     # Still 0
     assert_equal @user.accounts.size, 0
 
@@ -413,75 +424,104 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     post 'me/plaid', headers: @headers, params: {
       username: username,
       password: password,
-      product: 'connect',
+      product: product,
       type: type
     }
     assert_response :success
     @user.reload
+
     assert_equal @user.banks.size, 2 # chase and wells
     # Has at least one Account now
     assert_not_equal @user.accounts.size, 0
+    bank = @user.banks.find_by(name: type)
+    if product == 'auth'
+      assert_equal bank.plaid_auth, true
+      assert_equal bank.plaid_connect, false
+    else # connect
+      assert_equal bank.plaid_auth, false
+      assert_equal bank.plaid_connect, true
+    end
     @user.accounts.each do |account|
-      bank = @user.banks.find_by(name: type)
       assert_equal account.bank_id, bank.id
     end
   end
 
-  test 'should auth with plaid' do
-    # Identical to 'should connect with plaid', except with auth product,
-    # skipping redundant tests.
-    username = 'plaid_test'
-    password = 'plaid_good'
-    type = 'chase'
+  test 'should upgrade plaid auth to connect' do
+    should_upgrade_plaid('auth', 'connect')
+  end
 
-    # MFA
-    @user.reload
-    assert_equal @user.banks.size, 0
-    assert_equal @user.accounts.size, 0
-    post 'me/plaid', headers: @headers, params: {
-      username: username,
-      password: password,
-      product: 'auth',
-      type: type
-    }
-    assert_response :success
-    res = JSON.parse(@response.body)
-    assert_equal res['mfa_type'], 'list'
-    @user.reload
-    # Bank saved for reference
-    assert_equal @user.banks.size, 1
-    # Still 0
-    assert_equal @user.accounts.size, 0
+  test 'should upgrade plaid connect to auth' do
+    should_upgrade_plaid('connect', 'auth')
+  end
 
-    # Successfully acquired bank accounts
-    type = 'wells' # No MFA
+  def should_upgrade_plaid(existing_product, new_product)
+    # Send initial call
     post 'me/plaid', headers: @headers, params: {
-      username: username,
-      password: password,
-      product: 'auth',
-      type: type
+      username: 'plaid_test',
+      password: 'plaid_good',
+      product: existing_product,
+      type: 'wells' # No MFA
     }
     assert_response :success
     @user.reload
-    assert_equal @user.banks.size, 2 # chase and wells
+
     # Has at least one Account now
     assert_not_equal @user.accounts.size, 0
-    @user.accounts.each do |account|
-      bank = @user.banks.find_by(name: type)
-      assert_equal account.bank_id, bank.id
+    account = @user.accounts[0]
+    # Authed with existing_product only
+    if existing_product == 'auth'
+      assert_equal account.bank.plaid_auth, true
+      assert_equal account.bank.plaid_connect, false
+    else # connect
+      assert_equal account.bank.plaid_auth, false
+      assert_equal account.bank.plaid_connect, true
     end
+
+    # Requires auth
+    post 'me/plaid_upgrade'
+    assert_response :unauthorized
+    # Requires account ID and product
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: account.id
+    }
+    assert_response :bad_request
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      product: new_product
+    }
+    assert_response :bad_request
+    # Can't upgrade product when already upgraded
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: account.id,
+      product: existing_product
+    }
+    assert_response :bad_request
+
+    # Set upgrade request
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: account.id,
+      product: new_product
+    }
+    assert_response :success
+    account.reload
+
+    # Account's bank is upgraded now
+    assert_equal account.bank.plaid_auth, true
+    assert_equal account.bank.plaid_connect, true
+  end
+
+  test 'should mfa with plaid auth' do
+    should_mfa_with_plaid('auth')
   end
 
   test 'should mfa with plaid connect' do
+    should_mfa_with_plaid('connect')
+  end
+
+  def should_mfa_with_plaid(product)
     access_token = 'test_chase'
     type = 'email'
     mask = 'xxx-xxx-5309'
     answer = '1234'
-    product = 'connect'
-
-    # Requires auth
-    post 'me/plaid_mfa'
-    assert_response :unauthorized
 
     # Send initial call
     post 'me/plaid', headers: @headers, params: {
@@ -499,6 +539,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Still 0
     assert_equal @user.accounts.size, 0
 
+    # Requires auth
+    post 'me/plaid_mfa'
+    assert_response :unauthorized
     # Requires access_token and either answer, mask, or type
     post 'me/plaid_mfa', headers: @headers, params: {
       access_token: access_token,
@@ -523,6 +566,10 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       type: type
     }
     assert_response :success
+    # Bank saved for reference
+    assert_equal @user.banks.size, 1
+    # Still 0
+    assert_equal @user.accounts.size, 0
     post 'me/plaid_mfa', headers: @headers, params: {
       access_token: access_token,
       product: product,
@@ -538,22 +585,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :payment_required
 
-    # Needs more MFA
-    post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: 'test_usaa',
-      product: product,
-      answer: 'again'
-    }
-    assert_response :success
-    res = JSON.parse(@response.body)
-    assert_equal res['mfa_type'], 'questions'
-
     # Correct MFA answer
-    @user.reload
-    # Bank saved for reference
-    assert_equal @user.banks.size, 1
-    # Still 0
-    assert_equal @user.accounts.size, 0
     post 'me/plaid_mfa', headers: @headers, params: {
       access_token: access_token,
       product: product,
@@ -568,138 +600,27 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       bank = @user.banks.find_by(name: 'chase')
       assert_equal account.bank_id, bank.id
     end
-  end
 
-  test 'should mfa with plaid auth' do
-    # Identical to 'should mfa with plaid connect', except with auth product,
-    # skipping redundant tests.
-    access_token = 'test_chase'
-    type = 'email'
-    mask = 'xxx-xxx-5309'
-    answer = '1234'
-    product = 'connect'
-
-    # Send initial call
+    # Needs more MFA
+    # Send initial call with bofa (multi-question)
     post 'me/plaid', headers: @headers, params: {
       username: 'plaid_test',
       password: 'plaid_good',
       product: product,
-      type: 'chase'
-    }
-    assert_response :success
-    res = JSON.parse(@response.body)
-    assert_equal res['mfa_type'], 'list'
-    @user.reload
-    # Bank saved for reference
-    assert_equal @user.banks.size, 1
-    # Still 0
-    assert_equal @user.accounts.size, 0
-
-    # Set MFA method
-    post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: access_token,
-      product: product,
-      type: type
+      type: 'bofa',
     }
     assert_response :success
     post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: access_token,
-      product: product,
-      mask: mask
-    }
-    assert_response :success
-
-    # Incorrect MFA answer
-    post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: access_token,
-      product: product,
-      answer: 'wrong'
-    }
-    assert_response :payment_required
-
-    # Needs more MFA
-    post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: 'test_usaa',
+      access_token: 'test_bofa',
       product: product,
       answer: 'again'
     }
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal res['mfa_type'], 'questions'
-
-    # Correct MFA answer
-    @user.reload
-    # Bank saved for reference
-    assert_equal @user.banks.size, 1
-    # Still 0
-    assert_equal @user.accounts.size, 0
-    post 'me/plaid_mfa', headers: @headers, params: {
-      access_token: access_token,
-      product: product,
-      answer: answer
-    }
-    assert_response :success
-    @user.reload
-    assert_equal @user.banks.size, 1
-    # Has at least one Account now
-    assert_not_equal @user.accounts.size, 0
-    @user.accounts.each do |account|
-      bank = @user.banks.find_by(name: 'chase')
-      assert_equal account.bank_id, bank.id
-    end
-  end
-
-  test 'should create dwolla account' do
-    # Requires auth
-    post 'me/dwolla'
-    assert_response :unauthorized
-
-    # Requires ssn and phone
-    post 'me/dwolla', headers: @headers
-    assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_equal res['ssn'], ['is required']
-
-    # No address
-    # Store address for later
-    address = {
-      line1: '@user.address.line1',
-      line2: '@user.address.line2',
-      city: '@user.address.city',
-      state: '@user.address.state',
-      zip: '@user.address.zip'
-    }
-    @user.address.delete
-    post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
-    assert_response :bad_request
-    res = JSON.parse(@response.body)
-    assert_equal res['address'], ['is required']
-    assert_equal nil, @user.dwolla_status
-
-    # Address in payload
-    post 'me/dwolla', headers: @headers, params: {
-      address: address,
-      ssn: '123-45-6789'
-    }
-    assert_response :ok
-    @user.reload
-    assert_equal address[:line1], @user.address.line1
-    assert_equal address[:line2], @user.address.line2
-    assert_equal address[:city], @user.address.city
-    assert_equal address[:state], @user.address.state
-    assert_equal address[:zip], @user.address.zip
-    assert_not_equal nil, @user.dwolla_status
-  end
-
-  test 'should upload dwolla document' do
-    # TODO: Implement
   end
 
   test 'should update and remove accounts' do
-    # Requires auth
-    put 'me/accounts'
-    assert_response :unauthorized
-
     # Populate initial accounts
     # Tracking
     post 'me/plaid', headers: @headers, params: {
@@ -709,32 +630,25 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       type: 'wells' # No MFA
     }
     assert_response :success
-    # Source/deposit
-    post 'me/plaid', headers: @headers, params: {
-      username: 'plaid_test',
-      password: 'plaid_good',
-      product: 'auth',
-      type: 'wells' # No MFA
-    }
-    assert_response :success
     @user.reload
     # Has checking/savings now
     checking = @user.accounts.find_by(account_subtype: 'checking')
     assert_not_equal checking, nil
     savings = @user.accounts.find_by(account_subtype: 'savings')
     assert_not_equal savings, nil
+    # Source/deposit
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: checking.id, # savings.id would work too
+      product: 'auth'
+    }
+    assert_response :success
 
+    # Requires auth
+    put 'me/accounts'
+    assert_response :unauthorized
     # Requires one or more of the following: source, deposit, tracking
     put 'me/accounts', headers: @headers
     assert_response :bad_request
-
-    # Ensure no Account is set yet
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
-    account = Account.find_by(id: checking.id)
-    assert_equal account.tracking, false
-    account = Account.find_by(id: savings.id)
-    assert_equal account.tracking, false
 
     # Requires Dwolla to be authed
     put 'me/accounts', headers: @headers, params: {
@@ -743,8 +657,18 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       tracking: [checking.id, savings.id]
     }
     assert_response :bad_request
+
+    # Auth with Dwolla
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
     assert_response :ok
+
+    # Ensure no Account is set yet
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
 
     # Set Accounts
     put 'me/accounts', headers: @headers, params: {
@@ -881,6 +805,167 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     put 'me/accounts', headers: @headers, params: { tracking: [checking.id] }
   end
 
+  test 'should not update tracking accounts without auth' do
+    # Populate initial accounts
+    post 'me/plaid', headers: @headers, params: {
+      username: 'plaid_test',
+      password: 'plaid_good',
+      product: 'connect',
+      type: 'wells' # No MFA
+    }
+    assert_response :success
+    @user.reload
+    # Has checking/savings now
+    checking = @user.accounts.find_by(account_subtype: 'checking')
+    assert_not_equal checking, nil
+    savings = @user.accounts.find_by(account_subtype: 'savings')
+    assert_not_equal savings, nil
+
+    # Auth with Dwolla
+    post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
+    assert_response :ok
+
+    # Ensure no Account is set yet
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
+
+    # Set deduction without Auth
+    put 'me/accounts', headers: @headers, params: {
+      source: checking.id,
+      deposit: savings.id
+    }
+    assert_response :bad_request
+
+    # Ensure Account is still not set
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
+
+    # Set only tracking
+    put 'me/accounts', headers: @headers, params: {
+      tracking: [checking.id, savings.id]
+    }
+    assert_response :success
+    @user.reload
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, true
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, true
+  end
+
+  test 'should not update tracking accounts without connect' do
+    # Populate initial accounts
+    post 'me/plaid', headers: @headers, params: {
+      username: 'plaid_test',
+      password: 'plaid_good',
+      product: 'auth',
+      type: 'wells' # No MFA
+    }
+    assert_response :success
+    @user.reload
+    # Has checking/savings now
+    checking = @user.accounts.find_by(account_subtype: 'checking')
+    assert_not_equal checking, nil
+    savings = @user.accounts.find_by(account_subtype: 'savings')
+    assert_not_equal savings, nil
+
+    # Auth with Dwolla
+    post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
+    assert_response :ok
+
+    # Ensure no Account is set yet
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
+
+    # Set tracking without Connect
+    put 'me/accounts', headers: @headers, params: {
+      tracking: [checking.id, savings.id]
+    }
+    assert_response :bad_request
+    @user.reload
+
+    # Ensure Account is still not set
+    assert_equal @user.source_account, nil
+    assert_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
+
+    # Set only deduction
+    put 'me/accounts', headers: @headers, params: {
+      source: checking.id,
+      deposit: savings.id
+    }
+    assert_response :success
+    @user.reload
+    assert_not_equal @user.source_account, nil
+    assert_not_equal @user.deposit_account, nil
+    account = Account.find_by(id: checking.id)
+    assert_equal account.tracking, false
+    account = Account.find_by(id: savings.id)
+    assert_equal account.tracking, false
+  end
+
+  test 'should create dwolla account' do
+    # Requires auth
+    post 'me/dwolla'
+    assert_response :unauthorized
+
+    # Requires ssn and phone
+    post 'me/dwolla', headers: @headers
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['ssn'], ['is required']
+
+    # No address
+    # Store address for later
+    address = {
+      line1: '@user.address.line1',
+      line2: '@user.address.line2',
+      city: '@user.address.city',
+      state: '@user.address.state',
+      zip: '@user.address.zip'
+    }
+    @user.address.delete
+    post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
+    assert_response :bad_request
+    res = JSON.parse(@response.body)
+    assert_equal res['address'], ['is required']
+    assert_equal nil, @user.dwolla_status
+
+    # Address in payload
+    post 'me/dwolla', headers: @headers, params: {
+      address: address,
+      ssn: '123-45-6789'
+    }
+    assert_response :ok
+    @user.reload
+    assert_equal address[:line1], @user.address.line1
+    assert_equal address[:line2], @user.address.line2
+    assert_equal address[:city], @user.address.city
+    assert_equal address[:state], @user.address.state
+    assert_equal address[:zip], @user.address.zip
+    assert_not_equal nil, @user.dwolla_status
+  end
+
+  test 'should upload dwolla document' do
+    # TODO: Implement
+  end
+
   test 'should refresh transactions' do
     # Not implemented
   end
@@ -986,7 +1071,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       username: 'plaid_test',
       password: 'plaid_good',
       product: 'connect',
-      type: 'wells'
+      type: 'wells' # No MFA
     }
     assert_response :success
     @user.reload
@@ -1040,7 +1125,15 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal account_0, nil
     account_1 = @user.accounts.find_by(name: 'Plaid Checking')
     assert_not_equal account_1, nil
-    # Auth source/deposit Accounts with Dwolla
+
+    # Auth Accounts with Plaid
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: @user.accounts[0].id,
+      product: 'auth'
+    }
+    assert_response :success
+
+    # Set accounts as source/deposit
     put 'me/accounts', headers: @headers, params: {
       source: account_0.id,
       deposit: account_1.id
@@ -1051,9 +1144,12 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure both accounts were authed with Dwolla
     assert_not_equal account_0.dwolla_id, nil
     assert_not_equal account_1.dwolla_id, nil
+
+    # Set Vices
     vices = %w(CoffeeShops)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
+
     # TODO: Fake transactions
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
@@ -1114,6 +1210,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Auth with Dwolla to test movement of money
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
     assert_response :ok
+
     # Get transactions
     assert_equal @user.transactions.size, 0
     post 'me/plaid', headers: @headers, params: {
@@ -1129,15 +1226,26 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal checking, nil
     savings = @user.accounts.find_by(account_subtype: 'savings')
     assert_not_equal savings, nil
-    # Auth source/deposit Accounts with Dwolla
+
+    # Auth Accounts with Plaid
+    post 'me/plaid_upgrade', headers: @headers, params: {
+      account: @user.accounts[0].id,
+      product: 'auth'
+    }
+    assert_response :success
+
+    # Set accounts as source/deposit
     put 'me/accounts', headers: @headers, params: {
       source: checking.id,
       deposit: savings.id
     }
     assert_response :success
+
+    # Set Vices
     vices = %w(CoffeeShops)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
+
     # TODO: Fake transactions
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success

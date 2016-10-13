@@ -137,9 +137,57 @@ class V1::UsersController < ApplicationController
       raise get_plaid_error(e)
     end
 
-    set_bank(@authed_user, params[:type], plaid_user.access_token)
+    ret = mfa_or_populate(@authed_user,
+                          plaid_user,
+                          params[:product],
+                          params[:type])
+    raise ret if ret.class <= Error
+    render json: ret, status: :ok
+  end
 
-    ret = mfa_or_populate(@authed_user, plaid_user)
+  # POST users/me/plaid_upgrade
+  def plaid_upgrade
+    errors = {}
+
+    # Validate params
+    errors[:product] = ['is required'] if params[:product].blank?
+    if params[:account].blank?
+      errors[:account] = ['is required']
+    else
+      account = Account.find_by(id: params[:account])
+      errors[:account] = ['does not exist'] if account.nil?
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    # Validate account
+    if !account.bank.plaid_auth && !account.bank.plaid_connect
+      errors[:account] = ['cannot be upgraded']
+    end
+    # Validate product
+    if params[:product] == 'auth'
+      if account.bank.plaid_auth
+        (errors[:account] ||= []).push('already has Auth')
+      end
+    elsif params[:product] == 'connect'
+      if account.bank.plaid_connect
+        (errors[:account] ||= []).push('already has Connect')
+      end
+    else
+      errors[:product] = ["must be one of: 'connect', 'auth'"]
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    product = params[:product].to_sym
+    # We can do this because we validated for already-upgraded Banks
+    existing_product = account.bank.plaid_auth ? :auth : :connect
+    begin
+      existing_user = Plaid::User.load(existing_product, account.bank.access_token)
+      new_user = existing_user.upgrade(product)
+    rescue Plaid::PlaidError => e
+      raise get_plaid_error(e)
+    end
+
+    ret = mfa_or_populate(@authed_user, new_user, params[:product])
     raise ret if ret.class <= Error
     render json: ret, status: :ok
   end
@@ -172,8 +220,8 @@ class V1::UsersController < ApplicationController
 
     if params[:answer].present?
       options = {}
-      # 'login_only' gets only the credentials for a Plaid Connect user, omitting
-      # the user's transactions.
+      # 'login_only' gets only the credentials for a Plaid Connect user,
+      # omitting the user's transactions.
       options[:login_only] = true if params[:product] == 'connect'
       # Webhooks for transactions and account issues
       if ENV['RAILS_ENV'] == 'production'
@@ -201,9 +249,108 @@ class V1::UsersController < ApplicationController
       end
     end
 
-    ret = mfa_or_populate(@authed_user, plaid_user)
-    raise ret if ret.class <= Error
+    ret = mfa_or_populate(@authed_user, plaid_user, params[:product])
     render json: ret, status: :ok
+  end
+
+  # PUT users/me/accounts
+  def update_accounts
+    # Validate client input and look up Account models
+    source_account, deposit_account, e1 =
+      validate_deduction_accounts_payload(params[:source], params[:deposit])
+    tracking_accounts, e2 =
+      validate_tracking_accounts_payload(params[:tracking])
+    errors = e1.merge(e2) { |k, o, n| o + n } # Key, old, new
+    if source_account.nil? && deposit_account.nil? && tracking_accounts.empty?
+      errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    # Validate/Set Source/Deposit Accounts
+    if source_account || deposit_account
+      if @authed_user.dwolla_id
+        types = %w(savings checking)
+        if source_account
+          if types.exclude?(source_account.account_subtype)
+            errors[:source] = ['type must be one of: ' + types.join(', ')]
+          elsif !source_account.bank.plaid_auth
+            errors[:source] = ['must have Plaid Auth product']
+          else
+            @authed_user.source_account = source_account
+          end
+        end
+        if deposit_account
+          if types.exclude?(deposit_account.account_subtype)
+            errors[:deposit] = ['type must be one of: ' + types.join(', ')]
+          elsif !deposit_account.bank.plaid_auth
+            errors[:deposit] = ['must have Plaid Auth product']
+          else
+            @authed_user.deposit_account = deposit_account
+          end
+        end
+      else
+        errors[:general] = ['User is not yet verified with Dwolla']
+      end
+    end
+    # Validate Tracking accounts
+    tracking_accounts.each do |account|
+      if !account.bank.plaid_connect
+        (errors[:tracking] ||= []).push(
+          'Account with ID ' + account.id + ' must have Plaid Connect product'
+        )
+      end
+    end
+    # Report errors with Tracking/Source/Deposit Accounts
+    raise BadRequest.new(errors) if errors.present?
+
+    # Save Source/Deposit Accounts
+    if source_account || deposit_account
+      @authed_user.save!
+      @authed_user.dwolla_add_funding_sources
+    end
+
+    # Set Tracking Accounts
+    tracking_accounts.each do |account|
+      account.tracking = true
+      account.save!
+    end if tracking_accounts
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
+  end
+
+  # DELETE users/me/accounts
+  def remove_accounts
+    # Validate client input and look up Account models
+    tracking_accounts, errors =
+      validate_tracking_accounts_payload(params[:tracking])
+    if !params.has_key?(:source) && !params.has_key?(:deposit) &&
+      tracking_accounts.empty?
+
+      errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
+    end
+    raise BadRequest.new(errors) unless errors.blank?
+
+    # Remove Source/Deposit Accounts
+    if params.has_key?(:source) || params.has_key?(:deposit)
+      if params.has_key?(:source)
+        @authed_user.source_account = nil
+      end
+      if params.has_key?(:deposit)
+        @authed_user.deposit_account = nil
+      end
+      @authed_user.save!
+    end
+    # Remove funding sources that are no longer identified as source/deposit
+    @authed_user.dwolla_remove_funding_sources
+
+    # Remove Tracking Accounts
+    tracking_accounts.each do |account|
+      account.tracking = false
+      account.save!
+    end if tracking_accounts
+
+    render json: @authed_user, status: :ok
   end
 
   def dwolla
@@ -266,91 +413,6 @@ class V1::UsersController < ApplicationController
     end
 
     @authed_user.reload
-    render json: @authed_user, status: :ok
-  end
-
-  # PUT users/me/accounts
-  def update_accounts
-    # Validate client input and look up Account models
-    source_account, deposit_account, e1 =
-      validate_deduction_accounts_payload(params[:source], params[:deposit])
-    tracking_accounts, e2 =
-      validate_tracking_accounts_payload(params[:tracking])
-    errors = e1.merge(e2) { |k, o, n| o + n } # Key, old, new
-    if source_account.nil? && deposit_account.nil? && tracking_accounts.blank?
-      errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
-    end
-    unless errors.blank?
-      raise BadRequest.new(errors)
-    end
-
-    # Set Source/Deposit Accounts
-    if source_account || deposit_account
-      if @authed_user.dwolla_id
-        types = %w(savings checking)
-        if source_account
-          if types.exclude?(source_account.account_subtype)
-            errors[:source] = ['type must be one of: ' + types.join(', ')]
-          else
-            @authed_user.source_account = source_account
-          end
-        end
-        if deposit_account
-          if types.exclude?(deposit_account.account_subtype)
-            errors[:deposit] = ['type must be one of: ' + types.join(', ')]
-          else
-            @authed_user.deposit_account = deposit_account
-          end
-        end
-      else
-        errors[:general] = ['User is not yet verified with Dwolla']
-      end
-      raise BadRequest.new(errors) if errors.present?
-      @authed_user.save!
-      @authed_user.dwolla_add_funding_sources
-    end
-
-    # Set Tracking Accounts
-    tracking_accounts.each do |account|
-      account.tracking = true
-      account.save!
-    end if tracking_accounts
-
-    @authed_user.reload
-    render json: @authed_user, status: :ok
-  end
-
-  # DELETE users/me/accounts
-  def remove_accounts
-    # Validate client input and look up Account models
-    tracking_accounts, errors =
-      validate_tracking_accounts_payload(params[:tracking])
-    if !params.has_key?(:source) && !params.has_key?(:deposit) &&
-      tracking_accounts.blank?
-
-      errors[:general] = ['Missing parameter. Options are one or more of: "source", "deposit", "tracking"']
-    end
-    raise BadRequest.new(errors) unless errors.blank?
-
-    # Remove Source/Deposit Accounts
-    if params.has_key?(:source) || params.has_key?(:deposit)
-      if params.has_key?(:source)
-        @authed_user.source_account = nil
-      end
-      if params.has_key?(:deposit)
-        @authed_user.deposit_account = nil
-      end
-      @authed_user.save!
-    end
-    # Remove funding sources that are no longer identified as source/deposit
-    @authed_user.dwolla_remove_funding_sources
-
-    # Remove Tracking Accounts
-    tracking_accounts.each do |account|
-      account.tracking = false
-      account.save!
-    end if tracking_accounts
-
     render json: @authed_user, status: :ok
   end
 
@@ -712,9 +774,9 @@ class V1::UsersController < ApplicationController
 
   def validate_tracking_accounts_payload(tracking)
     errors = {}
+    tracking_accounts = []
     if !tracking.nil?
       if tracking.is_a?(Array)
-        tracking_accounts = []
         tracking.each do |tracking_account_id|
           tracking_account = Account.find_by(id: tracking_account_id)
           if tracking_account.nil?
