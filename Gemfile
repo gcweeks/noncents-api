@@ -34,7 +34,7 @@ gem 'slack-notifier'
 # Exception Notifications
 gem 'exception_notification'
 # attr_encrypted
-gem 'attr_encrypted'
+gem 'attr_encrypted', '~> 3.0.0'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console

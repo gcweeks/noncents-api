@@ -1,29 +1,14 @@
 module DwollaHelper
   require 'dwolla_v2'
+  include DwollaTokenConcern
   include SlackHelper
 
-  $dwolla = DwollaV2::Client.new(
-    id: ENV['DWOLLA_CLIENT_ID'],
-    secret: ENV['DWOLLA_CLIENT_SECRET']) do |config|
-
-    config.environment = :sandbox
-    # TODO: Implement
-    # config.environment = :production
-  end
-
-  @@account_token = $dwolla.tokens.new(
-    access_token: ENV['DWOLLA_ACCOUNT_ACCESS_TOKEN'],
-    refresh_token: ENV['DWOLLA_ACCOUNT_REFRESH_TOKEN'],
-    account_id: ENV['DWOLLA_ACCOUNT_ID']
-  )
-
   @@url = 'https://api-uat.dwolla.com/'
-  # TODO: if @@account_token.client.environment == :production
+  # TODO: if account_token.client.environment == :production
   # 'https://api.dwolla.com/'
 
   def self.add_customer(user, ssn, ip, retrying = false)
     return nil if user.blank? || user.address.blank? || ssn.blank? || ip.blank?
-
     payload = {
       firstName: user.fname,
       lastName: user.lname,
@@ -379,7 +364,7 @@ module DwollaHelper
 
   def self.get(route)
     begin
-      response = @@account_token.get(route)
+      response = account_token.get(route)
     rescue DwollaV2::Error => e
       return e
     end
@@ -389,7 +374,7 @@ module DwollaHelper
 
   def self.post(route, payload, headers = nil)
     begin
-      response = @@account_token.post(route, payload, headers)
+      response = account_token.post(route, payload, headers)
     rescue DwollaV2::Error => e
       return e
     end
