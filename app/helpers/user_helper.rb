@@ -100,6 +100,6 @@ module UserHelper
       account.save!
     end if plaid_user.accounts
 
-    user
+    user.reload
   end
 end
