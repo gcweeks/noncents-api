@@ -90,6 +90,9 @@ module UserHelper
       if plaid_account.numbers.present? # Auth
         account.routing_num = plaid_account.numbers[:routing]
         account.account_num = plaid_account.numbers[:account]
+        if account.account_num && account.account_num.length > 4
+          account.account_num_short = account.account_num[-4..-1]
+        end
       elsif plaid_account.meta['number'].present? # Connect
         account.account_num_short = plaid_account.meta['number']
       end
