@@ -47,8 +47,10 @@ class V1::WebhooksController < ApplicationController
       'customer_bank_transfer_completed' => :transfer_completed
     }
     return head :ok unless response_hash.key? params[:topic]
-    dwolla_id = params[:_links][:customer][:href]
-    dwolla_id.slice!(@@url + 'customers/')
+    if params[:_links] && params[:_links][:customer]
+      dwolla_id = params[:_links][:customer][:href]
+    end
+    dwolla_id.slice!(@@url + 'customers/') if dwolla_id
     if dwolla_id.nil?
       # Log error
       error = 'Dwolla ID in webhook: ' + params[:topic] + ' - is nil'
