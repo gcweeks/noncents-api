@@ -15,6 +15,8 @@ class Account < ApplicationRecord
       except: [:plaid_id, :account_num, :routing_num, :dwolla_id,
                :user_id]
     }.merge(options))
+    json['plaid_auth'] = self.bank.plaid_auth
+    json['plaid_connect'] = self.bank.plaid_connect
     json
   end
 end
