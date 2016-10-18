@@ -1,4 +1,5 @@
 module DwollaTokenConcern
+  include ErrorHelper
   extend ActiveSupport::Concern
 
   module ClassMethods
@@ -7,10 +8,7 @@ module DwollaTokenConcern
       begin
         token = DwollaTokenStore.fresh_token_by! account_id: ENV["DWOLLA_ACCOUNT_ID"]
       rescue ActiveRecord::RecordNotFound => _e
-        DwollaTokenStore.create! account_id: ENV["DWOLLA_ACCOUNT_ID"],
-                                 refresh_token: ENV["DWOLLA_ACCOUNT_REFRESH_TOKEN"],
-                                 expires_in: -1
-        token = DwollaTokenStore.fresh_token_by! account_id: ENV["DWOLLA_ACCOUNT_ID"]
+        raise ErrorHelper::InternalServerError('account_token not found')
       end
       @account_token ||= token
     end
@@ -20,7 +18,7 @@ module DwollaTokenConcern
       begin
         token = DwollaTokenStore.fresh_token_by! account_id: nil
       rescue ActiveRecord::RecordNotFound => _e
-        token = $dwolla.auths.client # This gets saved in our on_grant callback
+        $dwolla.auths.client # This gets saved in our intitializer's on_grant callback
       end
       @app_token ||= token
     end

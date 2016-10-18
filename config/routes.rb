@@ -12,6 +12,7 @@ Rails.application.routes.draw do
     get  'check_email'              => 'api#check_email'
     post 'weekly_deduct_cron'       => 'api#weekly_deduct_cron'
     post 'transaction_refresh_cron' => 'api#transaction_refresh_cron'
+    post 'dev_initialize_dwolla'    => 'api#dev_initialize_dwolla'
     scope 'version' do
       get 'ios' => 'api#version_ios'
     end

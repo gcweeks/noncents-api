@@ -33,7 +33,6 @@ class DwollaTokenStore < ApplicationRecord
   private
 
   def expired?
-    return true if access_token.blank?
     return false if expires_in < 0
     created_at < Time.now.utc - expires_in.seconds + DESIRED_FRESHNESS
   end

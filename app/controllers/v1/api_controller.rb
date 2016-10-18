@@ -14,6 +14,7 @@ class V1::ApiController < ApplicationController
     :twilio_callback,
     :weekly_deduct_cron,
     :transaction_refresh_cron,
+    :dev_initialize_dwolla,
     :version_ios
   ]
 
@@ -82,7 +83,7 @@ class V1::ApiController < ApplicationController
   def reset_password
     unless params[:user] && params[:user][:email]
       errors = { email: 'is required' }
-      raise BadRequest.new(errors) unless errors.blank?
+      raise BadRequest.new(errors)
     end
 
     user = User.find_by(email: params[:user][:email])
@@ -253,6 +254,16 @@ class V1::ApiController < ApplicationController
 
     logger.info DateTime.current.strftime(
       "CRON: Finished transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
+    head :ok
+  end
+
+  def dev_initialize_dwolla
+    unless params[:key] == ENV['SECRET_KEY'] && params[:refresh].present?
+      raise NotFound
+    end
+    DwollaTokenStore.create! account_id: ENV['DWOLLA_ACCOUNT_ID'],
+                             refresh_token: params[:refresh],
+                             expires_in: 0 # Refresh immediately
     head :ok
   end
 
