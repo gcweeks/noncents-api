@@ -318,9 +318,7 @@ module DwollaHelper
       Rails.logger.warn(response)
       error = error + "\n```" + response.inspect + '```'
     end
-    if ENV['RAILS_ENV'] == 'production'# || ENV['RAILS_ENV'] == 'development'
-      SlackHelper.log(error)
-    end
+    SlackHelper.log(error)
   end
 
   def self.get_existing_customer(email)
@@ -373,6 +371,8 @@ module DwollaHelper
   end
 
   def self.post(route, payload, headers = nil)
+    SlackHelper.log("```Access Token: "+account_token.access_token+
+                    "\nRefresh Token: "+account_token.refresh_token+"```")
     begin
       response = account_token.post(route, payload, headers)
     rescue DwollaV2::Error => e
