@@ -10,6 +10,7 @@ class DwollaTokenStore < ApplicationRecord
   # 'ActiveRecord::RecordNotFound' error. If one does exist, convert the
   # 'DwollaTokenStore' to a fresh 'DwollaV2::Token' (see '#to_fresh_token')
   def self.fresh_token_by! criteria
+    connection.clear_query_cache
     where(criteria)
       .order(created_at: :desc)
       .first!
