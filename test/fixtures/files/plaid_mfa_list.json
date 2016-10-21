@@ -1,0 +1,14 @@
+{
+  "type": "list",
+  "mfa": [
+    {
+      "mask": "t..t@plaid.com",
+      "type": "email"
+    },
+    {
+      "mask": "xxx-xxx-5309",
+      "type": "phone"
+    }
+  ],
+  "access_token": "test_chase"
+}
