@@ -187,7 +187,7 @@ module DwollaHelper
 
     response = self.get('customers/' + user.dwolla_id + '/funding-sources')
     unless response.class == DwollaV2::Response
-      log_error('DwollaHelper.remove_funding_sources - Couldn\t get funding sources', response)
+      log_error("DwollaHelper.remove_funding_sources - Couldn't get funding sources", response)
       return false
     end
     unless response['_embedded']
@@ -361,6 +361,8 @@ module DwollaHelper
   end
 
   def self.get(route)
+    SlackHelper.log("```Access Token: "+account_token.access_token+
+                    "\nRefresh Token: "+account_token.refresh_token+"```")
     begin
       response = account_token.get(route)
     rescue DwollaV2::Error => e
