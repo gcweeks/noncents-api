@@ -340,9 +340,10 @@ class V1::UsersController < ApplicationController
         @authed_user.deposit_account = nil
       end
       @authed_user.save!
+      # Remove funding sources that are no longer identified as source/deposit
+      @authed_user.reload
+      @authed_user.dwolla_remove_funding_sources
     end
-    # Remove funding sources that are no longer identified as source/deposit
-    @authed_user.dwolla_remove_funding_sources
 
     # Remove Tracking Accounts
     tracking_accounts.each do |account|
