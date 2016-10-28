@@ -1,0 +1,118 @@
+{
+  "_links": {
+    "self": {
+      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "funding-source"
+    },
+    "customer": {
+      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "customer"
+    }
+  },
+  "_embedded": {
+    "funding-sources": [
+      {
+        "_links": {
+          "self": {
+            "href": "https://api-uat.dwolla.com/funding-sources/00ce7f94-9343-4852-a4ee-61b69bbda546",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "customer": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          }
+        },
+        "id": "00ce7f94-9343-4852-a4ee-61b69bbda546",
+        "status": "verified",
+        "type": "bank",
+        "name": "Plaid Checking",
+        "created": "2016-09-13T20:42:46.000Z",
+        "removed": true,
+        "channels": [
+          "ach"
+        ]
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "https://api-uat.dwolla.com/funding-sources/0a458ebc-3abd-4350-a2af-d9f325302627",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "customer": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          }
+        },
+        "id": "0a458ebc-3abd-4350-a2af-d9f325302627",
+        "status": "verified",
+        "type": "bank",
+        "name": "Plaid Savings",
+        "created": "2016-09-07T00:07:59.000Z",
+        "removed": true,
+        "channels": [
+          "ach"
+        ]
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "https://api-uat.dwolla.com/funding-sources/f269d27d-3a71-4dff-ab71-b34483136ae4",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "customer": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          }
+        },
+        "id": "f269d27d-3a71-4dff-ab71-b34483136ae4",
+        "status": "verified",
+        "type": "bank",
+        "name": "Plaid Premier Checking",
+        "created": "2016-10-05T23:32:42.000Z",
+        "removed": false,
+        "channels": [
+          "ach"
+        ]
+      },
+      {
+        "_links": {
+          "self": {
+            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "customer": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          },
+          "with-available-balance": {
+            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "balance": {
+            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105/balance",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "balance"
+          }
+        },
+        "id": "91a45bda-d04f-44dd-ba05-a26f24247105",
+        "status": "verified",
+        "type": "balance",
+        "name": "Balance",
+        "created": "2016-07-19T23:51:50.000Z",
+        "removed": false,
+        "channels": []
+      }
+    ]
+  }
+}

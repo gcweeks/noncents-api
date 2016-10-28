@@ -1,0 +1,76 @@
+{
+  "_links": {
+    "self": {
+      "href": "https://api-uat.dwolla.com/customers?search=cashmoney@gmail.com",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "customer"
+    },
+    "first": {
+      "href": "https://api-uat.dwolla.com/customers?search=cashmoney@gmail.com&limit=25&offset=0",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "customer"
+    },
+    "last": {
+      "href": "https://api-uat.dwolla.com/customers?search=cashmoney@gmail.com&limit=25&offset=0",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "customer"
+    }
+  },
+  "_embedded": {
+    "customers": [
+      {
+        "_links": {
+          "self": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          },
+          "receive": {
+            "href": "https://api-uat.dwolla.com/transfers",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "transfer"
+          },
+          "edit-form": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json; profile=\"https://github.com/dwolla/hal-forms\"",
+            "resource-type": "customer"
+          },
+          "edit": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "customer"
+          },
+          "funding-sources": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "funding-source"
+          },
+          "transfers": {
+            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/transfers",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "transfer"
+          },
+          "send": {
+            "href": "https://api-uat.dwolla.com/transfers",
+            "type": "application/vnd.dwolla.v1.hal+json",
+            "resource-type": "transfer"
+          }
+        },
+        "id": "8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+        "firstName": "Cash",
+        "lastName": "Money",
+        "email": "cashmoney@gmail.com",
+        "type": "personal",
+        "status": "verified",
+        "created": "2016-07-19T23:51:46.190Z",
+        "address1": "221 Corrected Address St.",
+        "address2": "Fl 8",
+        "city": "Ridgewood",
+        "state": "NY",
+        "postalCode": "11385",
+        "phone": "5555552016"
+      }
+    ]
+  },
+  "total": 1
+}

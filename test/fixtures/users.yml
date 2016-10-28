@@ -2,7 +2,7 @@ cashmoney:
   fname: 'Cash'
   lname: 'Money'
   email: 'cashmoney@gmail.com'
-  dob: <%= Date.today %>
+  dob: <%= Date.today - 19.years %>
   invest_percent: 5
   goal: 150
   phone: '5555552016'

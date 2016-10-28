@@ -475,12 +475,18 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   def should_upgrade_plaid(existing_product, new_product)
+    username = 'plaid_test'
+    password = 'plaid_good'
+    type = 'wells' # No MFA
+
+    initialize_plaid_stubs
+
     # Send initial call
     post 'me/plaid', headers: @headers, params: {
-      username: 'plaid_test',
-      password: 'plaid_good',
+      username: username,
+      password: password,
       product: existing_product,
-      type: 'wells' # No MFA
+      type: type
     }
     assert_response :success
     @user.reload
@@ -542,11 +548,15 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     type = 'email'
     mask = 'xxx-xxx-5309'
     answer = '1234'
+    username = 'plaid_test'
+    password = 'plaid_good'
+
+    initialize_plaid_stubs
 
     # Send initial call
     post 'me/plaid', headers: @headers, params: {
-      username: 'plaid_test',
-      password: 'plaid_good',
+      username: username,
+      password: password,
       product: product,
       type: 'chase'
     }
@@ -596,7 +606,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       mask: mask
     }
     assert_response :success
-
     # Incorrect MFA answer
     post 'me/plaid_mfa', headers: @headers, params: {
       access_token: access_token,
@@ -624,8 +633,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Needs more MFA
     # Send initial call with bofa (multi-question)
     post 'me/plaid', headers: @headers, params: {
-      username: 'plaid_test',
-      password: 'plaid_good',
+      username: username,
+      password: password,
       product: product,
       type: 'bofa',
     }
@@ -641,6 +650,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should update and remove accounts' do
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
+
     # Populate initial accounts
     # Tracking
     post 'me/plaid', headers: @headers, params: {
@@ -826,6 +838,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should not update tracking accounts without auth' do
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
+
     # Populate initial accounts
     post 'me/plaid', headers: @headers, params: {
       username: 'plaid_test',
@@ -883,6 +898,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should not update tracking accounts without connect' do
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
+
     # Populate initial accounts
     post 'me/plaid', headers: @headers, params: {
       username: 'plaid_test',
@@ -941,6 +959,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should create dwolla account' do
+    initialize_dwolla_stubs(@user)
+
     # Requires auth
     post 'me/dwolla'
     assert_response :unauthorized
@@ -954,11 +974,11 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # No address
     # Store address for later
     address = {
-      line1: '@user.address.line1',
-      line2: '@user.address.line2',
-      city: '@user.address.city',
-      state: '@user.address.state',
-      zip: '@user.address.zip'
+      line1: @user.address.line1,
+      line2: @user.address.line2,
+      city: @user.address.city,
+      state: @user.address.state,
+      zip: @user.address.zip
     }
     @user.address.delete
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
@@ -1081,6 +1101,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should refresh transactions dev' do
+    initialize_plaid_stubs
+
     # Requires auth
     # TODO: Fake transactions
     post 'me/dev_refresh_transactions'
@@ -1123,6 +1145,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should deduct into funds dev' do
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
+
     # Requires auth
     post 'me/dev_deduct'
     assert_response :unauthorized
@@ -1223,6 +1248,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should aggregate funds dev' do
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
+
     # Requires auth
     post 'me/dev_aggregate'
     assert_response :unauthorized
