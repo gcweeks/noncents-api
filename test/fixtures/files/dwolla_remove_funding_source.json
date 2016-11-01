@@ -1,0 +1,18 @@
+{
+  "_links": {
+    "self": {
+      "href": "https://api-uat.dwolla.com/funding-sources/f269d27d-3a71-4dff-ab71-b34483136ae4",
+      "type": "application/vnd.dwolla.v1.hal+json",
+      "resource-type": "funding-source"
+    }
+  },
+  "id": "f269d27d-3a71-4dff-ab71-b34483136ae4",
+  "status": "verified",
+  "type": "bank",
+  "name": "Plaid Premier Checking",
+  "created": "2016-10-05 23:32:33 UTC",
+  "removed": true,
+  "channels": [
+    "ach"
+  ]
+}

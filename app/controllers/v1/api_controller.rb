@@ -221,7 +221,9 @@ class V1::ApiController < ApplicationController
       # Step 2: Deduct the total amount from the User's source Account into
       # their Deposit account. If they do not have source/deposit Accounts
       # specified or set up with Dwolla, this call will do nothing.
-      user.dwolla_transfer(amount_to_invest)
+      unless user.dwolla_transfer(amount_to_invest)
+        logger.info "Cannot deduct - Dwolla not set up"
+      end
 
       # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
       # Note, we won't check whether or not they are archived here because

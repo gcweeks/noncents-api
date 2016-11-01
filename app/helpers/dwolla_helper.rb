@@ -131,14 +131,6 @@ module DwollaHelper
   end
 
   def self.add_funding_source(user, account)
-    if ENV['RAILS_ENV'] == 'test'
-      # Get existing funding source by name
-      response = self.get_existing_funding_source(user, account)
-      return response unless response == nil
-      # If response is nil, no existing funding source was found, so fall-through to
-      # creating one.
-    end
-
     if user.dwolla_id.blank?
       log_error('DwollaHelper.add_funding_source - Not Dwolla Authed', response)
       return nil
@@ -169,7 +161,7 @@ module DwollaHelper
     if response.class == DwollaV2::Response
       ret = response.headers['location']
       unless ret && ret.slice!(@@url + 'funding-sources/')
-        log_error('DwollaHelper.add_customer - Couldn\'t slice ret', response)
+        log_error('DwollaHelper.add_funding_source - Couldn\'t slice ret', response)
         return nil
       end
       return ret
@@ -182,8 +174,6 @@ module DwollaHelper
 
   def self.remove_funding_sources(user)
     return false if user.dwolla_id.blank?
-
-    return true if ENV['RAILS_ENV'] == 'test'
 
     response = self.get('customers/' + user.dwolla_id + '/funding-sources')
     unless response.class == DwollaV2::Response
@@ -242,7 +232,6 @@ module DwollaHelper
         return funding_source['id'] if funding_source['type'] == 'balance'
       end
     end
-
     # No balance funding source found
     nil
   end
@@ -250,7 +239,6 @@ module DwollaHelper
   def self.transfer_money(user, balance, amount)
     return false if user.blank? || balance.blank? || amount.blank?
 
-    return true if ENV['RAILS_ENV'] == 'test'
 
     # Perform Source->Balance transaction
     source = user.source_account.dwolla_id
@@ -260,10 +248,10 @@ module DwollaHelper
 
     # Wait for webhook indicating that transaction has cleared
     dt = DwollaTransaction.new(dwolla_id: response,
-                          balance: balance,
-                          source: source,
-                          deposit: deposit,
-                          amount: amount)
+                               balance: balance,
+                               source: source,
+                               deposit: deposit,
+                               amount: amount)
     dt.user = user
     unless dt.save
       log_error('DwollaHelper.perform_transfer - Couldn\'t create DwollaTransaction', dt.errors)
@@ -313,8 +301,10 @@ module DwollaHelper
   private
 
   def self.log_error(error, response = nil)
+    p error
     Rails.logger.warn(error)
     if response.present?
+      p response
       Rails.logger.warn(response)
       error = error + "\n```" + response.inspect + '```'
     end
@@ -368,7 +358,6 @@ module DwollaHelper
     rescue DwollaV2::Error => e
       return e
     end
-
     response
   end
 
@@ -380,7 +369,6 @@ module DwollaHelper
     rescue DwollaV2::Error => e
       return e
     end
-
     response
   end
 end

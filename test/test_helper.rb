@@ -9,8 +9,12 @@ class ActiveSupport::TestCase
   # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
   fixtures :all
 
+  def fixture_json(name)
+    JSON.parse(File.read('test/fixtures/files/' + name + '.json'))
+  end
+
   def fixture(name)
-    JSON.parse(File.read('test/fixtures/files/' + name + '.json')).to_json
+    fixture_json(name).to_json
   end
 
   # Stubs
@@ -38,10 +42,12 @@ class ActiveSupport::TestCase
   end
 
   def initialize_dwolla_stubs(user)
-    # Add Customer
-    json = fixture('dwolla_add_customer')
-    dwolla_id = JSON.parse(json)['location']
+    initial_json = fixture_json('dwolla_add_customer')
+    dwolla_id = initial_json['location'].clone
     dwolla_id.slice!('https://api-uat.dwolla.com/customers/')
+
+    # Add Customer
+    json = initial_json.to_json
     body = {
       firstName: user.fname,
       lastName: user.lname,
@@ -87,6 +93,25 @@ class ActiveSupport::TestCase
       name:'Plaid Savings'
     }
     stub_dwolla :post, 'customers/'+dwolla_id+'/funding-sources', body: body, status: 201, response_headers: json
+
+    # Remove funding source
+    fs_json = fixture_json('dwolla_get_funding_sources')
+    fs_json = fs_json['_embedded']['funding-sources']
+    initial_json = fixture_json('dwolla_remove_funding_source')
+    body = { removed: true }
+    source_id = destination_id = nil
+    fs_json.each do |fs|
+      initial_json['_links']['self']['href'] = 'https://api-uat.dwolla.com/funding-sources/'+fs['id']
+      initial_json['id'] = fs['id']
+      initial_json['name'] = fs['name']
+      if fs['name'] == 'Plaid Checking'
+        source_id = fs['id']
+      elsif fs['name'] == 'Plaid Savings'
+        destination_id = fs['id']
+      end
+      json = initial_json.to_json
+      stub_dwolla :post, 'funding-sources/'+fs['id'], response: json
+    end
   end
 
   def stub_plaid(method, path, body: {}, query: {}, status: 200, response: nil, host: 'tartan.plaid.com')

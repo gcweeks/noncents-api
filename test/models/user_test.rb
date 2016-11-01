@@ -112,6 +112,8 @@ class UserTest < ActiveSupport::TestCase
     user.address.save!
     user.save!
 
+    initialize_dwolla_stubs(user)
+
     assert_equal user.dwolla_id, nil
     assert_equal user.dwolla_status, nil
 

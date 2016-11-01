@@ -11,6 +11,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.address.save!
     @user.save!
     @headers = { 'Authorization' => @user.token }
+    initialize_plaid_stubs
+    initialize_dwolla_stubs(@user)
   end
 
   test 'should create' do
@@ -479,7 +481,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     password = 'plaid_good'
     type = 'wells' # No MFA
 
-    initialize_plaid_stubs
 
     # Send initial call
     post 'me/plaid', headers: @headers, params: {
@@ -551,7 +552,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     username = 'plaid_test'
     password = 'plaid_good'
 
-    initialize_plaid_stubs
 
     # Send initial call
     post 'me/plaid', headers: @headers, params: {
@@ -650,9 +650,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should update and remove accounts' do
-    initialize_plaid_stubs
-    initialize_dwolla_stubs(@user)
-
     # Populate initial accounts
     # Tracking
     post 'me/plaid', headers: @headers, params: {
@@ -838,9 +835,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should not update tracking accounts without auth' do
-    initialize_plaid_stubs
-    initialize_dwolla_stubs(@user)
-
     # Populate initial accounts
     post 'me/plaid', headers: @headers, params: {
       username: 'plaid_test',
@@ -898,9 +892,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should not update tracking accounts without connect' do
-    initialize_plaid_stubs
-    initialize_dwolla_stubs(@user)
-
     # Populate initial accounts
     post 'me/plaid', headers: @headers, params: {
       username: 'plaid_test',
@@ -959,8 +950,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should create dwolla account' do
-    initialize_dwolla_stubs(@user)
-
     # Requires auth
     post 'me/dwolla'
     assert_response :unauthorized
@@ -1101,8 +1090,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should refresh transactions dev' do
-    initialize_plaid_stubs
-
     # Requires auth
     # TODO: Fake transactions
     post 'me/dev_refresh_transactions'
@@ -1145,9 +1132,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should deduct into funds dev' do
-    initialize_plaid_stubs
-    initialize_dwolla_stubs(@user)
-
     # Requires auth
     post 'me/dev_deduct'
     assert_response :unauthorized
@@ -1213,6 +1197,36 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       tx.save!
     end
 
+    # Manually add stub
+    amount_to_invest = 0.0
+    @user.transactions.each do |transaction|
+      if !transaction.archived && !transaction.backed_out && !transaction.invested
+        amount = transaction.amount * @user.invest_percent / 100.0
+        amount_to_invest += amount.round(2)
+      end
+    end
+    balance = DwollaHelper.get_balance_funding_source(@user)
+    json = fixture('dwolla_transfer')
+    body = {
+      _links: {
+        source: {
+          href: "https://api-uat.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
+        },
+        destination: {
+          href: "https://api-uat.dwolla.com/funding-sources/"+balance
+        }
+      },
+      amount: {
+        currency: 'USD',
+        value: amount_to_invest.to_s
+      }
+    }
+    stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
+    body[:_links][:source] = "https://api-uat.dwolla.com/funding-sources/"+balance
+    body[:_links][:destination] = "https://api-uat.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
+    # Returns same transfer ID (json), but that shouldn't matter
+    stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
+
     # Deduct
     assert_equal @user.fund.amount_invested, 0
     assert_equal @user.yearly_fund().amount_invested, 0
@@ -1233,24 +1247,23 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal @user.fund.amount_invested, total_invested
     assert_equal @user.yearly_fund().amount_invested, total_invested
 
-    # Testing Dwolla:
-    # assert_equal DwollaTransaction.all.count, 1
+    assert_equal DwollaTransaction.all.count, 1
+    # TODO:
     # dwolla_tx = DwollaTransaction.all.first
     #
-    # # Switch to the Webhook controller to fake a webhook
+    # Switch to the Webhook controller to fake a webhook
     # old_controller = @controller
     # @controller = WebhooksController.new
-    # post :dwolla, topic: 'customer_bank_transfer_completed',
-    #               resourceId: dwolla_tx.dwolla_id
+    # post 'webhooks/dwolla', params: {
+    #   topic: 'customer_bank_transfer_completed',
+    #   resourceId: dwolla_tx.dwolla_id
+    # }
     # assert_response :success
     # # Restore the original controller
     # @controller = old_controller
   end
 
   test 'should aggregate funds dev' do
-    initialize_plaid_stubs
-    initialize_dwolla_stubs(@user)
-
     # Requires auth
     post 'me/dev_aggregate'
     assert_response :unauthorized
@@ -1312,6 +1325,37 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       tx.amount += 10.0
       tx.save!
     end
+
+    # Manually add stub
+    amount_to_invest = 0.0
+    @user.transactions.each do |transaction|
+      if !transaction.archived && !transaction.backed_out && !transaction.invested
+        amount = transaction.amount * @user.invest_percent / 100.0
+        amount_to_invest += amount.round(2)
+      end
+    end
+    balance = DwollaHelper.get_balance_funding_source(@user)
+    json = fixture('dwolla_transfer')
+    body = {
+      _links: {
+        source: {
+          href: "https://api-uat.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
+        },
+        destination: {
+          href: "https://api-uat.dwolla.com/funding-sources/"+balance
+        }
+      },
+      amount: {
+        currency: 'USD',
+        value: amount_to_invest.to_s
+      }
+    }
+    stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
+    body[:_links][:source] = "https://api-uat.dwolla.com/funding-sources/"+balance
+    body[:_links][:destination] = "https://api-uat.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
+    # Returns same transfer ID (json), but that shouldn't matter
+    stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
+
     post 'me/dev_deduct', headers: @headers
     assert_response :success
 

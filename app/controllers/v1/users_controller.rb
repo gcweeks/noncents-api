@@ -663,7 +663,9 @@ class V1::UsersController < ApplicationController
       # their Deposit account. If they do not have source/deposit Accounts
       # specified or set up with Dwolla, this call will do nothing. For now,
       # we will ignore the return value of this method.
-      @authed_user.dwolla_transfer(amount_to_invest)
+      unless @authed_user.dwolla_transfer(amount_to_invest)
+        logger.info "Cannot dev_deduct - Dwolla not set up"
+      end
 
       # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
       # Note, we won't check whether or not they are archived here because
