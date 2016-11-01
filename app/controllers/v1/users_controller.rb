@@ -708,15 +708,18 @@ class V1::UsersController < ApplicationController
   end
 
   def dev_notify
+    if params[:title].blank? && params[:body].blank?
+      unless weekly_notification(@authed_user, 12.34)
+        raise InternalServerError
+      end
+      return render json: { 'notification' => 'sent' }, status: :ok
+    end
+
     # Validate payload
     errors = {}
-    unless params[:title]
-      errors[:title] = ['is required']
-    end
-    unless params[:body]
-      errors[:body] = ['is required']
-    end
-    raise BadRequest.new(errors) unless errors.blank?
+    errors[:title] = ['is required'] if params[:title].blank?
+    errors[:body] = ['is required'] if params[:body].blank?
+    raise BadRequest.new(errors) if errors.present?
     unless test_notification(@authed_user, params[:title], params[:body])
       raise InternalServerError
     end

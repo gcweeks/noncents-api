@@ -46,6 +46,21 @@ module NotificationHelper
     true
   end
 
+  def weekly_notification(user, amount)
+    return false unless user && amount
+
+    # Populate Notification
+    notification = {
+      'title' => 'Weekly Report',
+      'body' => 'You have saved $' + amount.to_s + ' this week!'
+    }
+
+    # Send Notification
+    res = send_notification(user, notification, nil)
+    process_response(res)
+    true
+  end
+
   private
 
   def send_notification(user, notification, body)

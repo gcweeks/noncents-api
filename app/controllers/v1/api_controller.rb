@@ -223,6 +223,9 @@ class V1::ApiController < ApplicationController
       # specified or set up with Dwolla, this call will do nothing.
       unless user.dwolla_transfer(amount_to_invest)
         logger.info "Cannot deduct - Dwolla not set up"
+        unless weekly_notification(user, amount_to_invest)
+          SlackHelper.log('Failed to send weekly notification to user '+user.id)
+        end
       end
 
       # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
