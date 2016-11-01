@@ -27,9 +27,12 @@ class ActiveSupport::TestCase
     stub = stub_request(method, "https://#{host}/#{path}")
     stub = stub.with(expectations) unless expectations.empty?
 
-    if response_headers.present?
+    if response_headers
       response_headers = JSON.parse(response_headers)
+    else
+      response_headers = {}
     end
+    response_headers['content-type'] = "application/vnd.dwolla.v1.hal+json; charset=UTF-8"
 
     stub.to_return(status: status, body: response, headers: response_headers)
   end
