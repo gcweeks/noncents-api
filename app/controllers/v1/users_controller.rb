@@ -517,7 +517,6 @@ class V1::UsersController < ApplicationController
     account_checking.save!
     @authed_user.source_account = account_checking
     @authed_user.save!
-    @authed_user.dwolla_add_funding_sources
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'foo',
