@@ -1,5 +1,6 @@
 class V1::ApiController < ApplicationController
   include ApiHelper
+  include NotificationHelper
 
   before_action :init
   before_action :restrict_access, except: [
