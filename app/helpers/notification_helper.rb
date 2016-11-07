@@ -56,14 +56,12 @@ module NotificationHelper
     }
 
     # Send Notification
-    res = send_notification(user, notification, nil)
-    process_response(res)
-    true
+    send_notification(user, notification, nil)
   end
 
   private
 
-  def send_notification(user, notification, body)
+  def send_notification(user, notification, notif_body)
     return true if Rails.env.test?
     return false unless user
     init_notification_vars
@@ -76,14 +74,15 @@ module NotificationHelper
 
     # Send notification to each of the User's registered devices
     ret = true
-    req.body = {
+    req_body = {
       'priority' => 'high'
     }
-    req.body['notification'] = notification if notification
-    req.body['body'] = body if body
-    for token in user.fcm_tokens
-      req.body['to'] = token
-      res = http.request(req.to_json)
+    req_body['notification'] = notification if notification
+    req_body['body'] = notif_body if notif_body
+    for token_object in user.fcm_tokens
+      req_body['to'] = token_object.token
+      req.body = req_body.to_json
+      res = http.request(req)
       ret &&= process_response(res)
     end
     ret
