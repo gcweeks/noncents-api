@@ -145,7 +145,7 @@ class V1::ApiController < ApplicationController
   end
 
   def weekly_deduct_cron
-    raise NotFound unless request.remote_ip == '127.0.0.1'
+    raise NotFound unless params[:token] == ENV['SECRET_KEY']
 
     current_month = Date.current.beginning_of_month
     logger.info DateTime.current.strftime(
@@ -246,7 +246,7 @@ class V1::ApiController < ApplicationController
   end
 
   def transaction_refresh_cron
-    raise NotFound unless request.remote_ip == '127.0.0.1'
+    raise NotFound unless params[:token] == ENV['SECRET_KEY']
 
     logger.info DateTime.current.strftime(
       "CRON: Start transaction_refresh_cron at %Y-%m-%d %H:%M:%S::%L %z")
