@@ -48,11 +48,12 @@ module NotificationHelper
 
   def weekly_notification(user, amount)
     return false unless user && amount
+    return true if amount == 0.0
 
     # Populate Notification
     notification = {
       'title' => 'Weekly Report',
-      'body' => 'You have saved $' + amount.to_s + ' this week!'
+      'body' => 'You have saved $' + ('%.2f' % amount) + ' this week!'
     }
 
     # Send Notification
