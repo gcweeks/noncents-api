@@ -18,7 +18,7 @@ Rails.application.routes.draw do
     end
     scope 'webhooks' do
       get  'twilio' => 'webhooks#twilio'
-      get  'plaid'  => 'webhooks#plaid'
+      post 'plaid'  => 'webhooks#plaid'
       post 'dwolla' => 'webhooks#dwolla'
     end
 
