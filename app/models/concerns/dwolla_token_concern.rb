@@ -18,7 +18,7 @@ module DwollaTokenConcern
           raise ErrorHelper::InternalServerError('account_token not found')
         end
       end
-      @account_token ||= token
+      @account_token = token
     end
 
     def app_token
@@ -28,7 +28,7 @@ module DwollaTokenConcern
       rescue ActiveRecord::RecordNotFound => _e
         $dwolla.auths.client # This gets saved in our intitializer's on_grant callback
       end
-      @app_token ||= token
+      @app_token = token
     end
   end
 end
