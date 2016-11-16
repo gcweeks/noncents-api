@@ -229,7 +229,8 @@ class User < ApplicationRecord
       # Get Plaid model
       begin
         plaid_user = Plaid::User.load(:connect, bank.access_token)
-        transactions = plaid_user.transactions
+        transactions = plaid_user.transactions(start_date: Date.current-2.weeks,
+                                               end_date: Date.current)
       rescue Plaid::PlaidError => e
         status = case e
         when Plaid::BadRequestError

@@ -145,6 +145,9 @@ class ActiveSupport::TestCase
       options: "{\"pending\":false}"
     }
     stub_plaid :post, 'connect/get', body: body, response: json
+    body[:options] = "{\"pending\":false,\"gte\":\""+(Date.current-2.weeks).to_s+
+                     "\",\"lte\":\""+Date.current.to_s+"\"}"
+    stub_plaid :post, 'connect/get', body: body, response: json
   end
 
   def initialize_plaid_stubs_by_product(product)
