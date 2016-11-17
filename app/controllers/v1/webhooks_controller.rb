@@ -84,10 +84,11 @@ end
 
 def customer_verified
   dt = DateTime.parse params[:timestamp]
+  time = @webhook_user.dwolla_verified_at
 
   # if the verification webhook comes in over an hour later, send
   # seperate verification email, not combined with welcome email
-  if (@webhook_user.dwolla_verified_at.utc + 1.hour) > dt
+  if time && (time.utc + 1.hour > dt)
     UserMailer.verification(@webhook_user).deliver_now
   else
     UserMailer.welcome_email(@webhook_user).deliver_now
