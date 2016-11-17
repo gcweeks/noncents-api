@@ -1,5 +1,4 @@
 class DwollaTokenStore < ApplicationRecord
-  include SlackHelper
   DESIRED_FRESHNESS = 1.minute
   SECRET_KEY = ENV['SECRET_KEY']
 
@@ -12,13 +11,7 @@ class DwollaTokenStore < ApplicationRecord
   # 'DwollaTokenStore' to a fresh 'DwollaV2::Token' (see '#to_fresh_token')
   def self.fresh_token_by! criteria
     token_stores = where(criteria).order(created_at: :desc)
-    token_store = token_stores.first!.to_fresh_token
-    SlackHelper.log("```Access Token: "+token_store.access_token+
-      "\nRefresh Token: "+token_store.refresh_token+
-      "\nTokens created_at:\n"+
-      token_stores.map(&:created_at).to_json+
-      "```")
-    token_store
+    token_stores.first!.to_fresh_token
   end
 
   def to_fresh_token

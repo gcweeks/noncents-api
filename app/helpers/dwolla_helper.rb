@@ -351,11 +351,6 @@ module DwollaHelper
   end
 
   def self.get(route)
-    SlackHelper.log("```Get"+
-      "\nAccess Token: "+account_token.access_token+
-      "\nRefresh Token: "+account_token.refresh_token+
-      "\nNumber of tokens: "+DwollaTokenStore.all.count.to_s+
-      "```")
     begin
       response = account_token.get(route)
     rescue DwollaV2::Error => e
@@ -365,11 +360,6 @@ module DwollaHelper
   end
 
   def self.post(route, payload, headers = nil)
-    SlackHelper.log("```Post"+
-      "\nAccess Token: "+account_token.access_token+
-      "\nRefresh Token: "+account_token.refresh_token+
-      "\nNumber of tokens: "+DwollaTokenStore.all.count.to_s+
-      "```")
     begin
       response = account_token.post(route, payload, headers)
     rescue DwollaV2::Error => e
