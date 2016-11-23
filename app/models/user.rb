@@ -41,6 +41,7 @@ class User < ApplicationRecord
   validates :fund, presence: true
   validates :goal, inclusion: 1..5500
   validate :valid_phone?
+  # validate :common_password?
 
   def valid_phone?
     if self.phone
@@ -54,6 +55,16 @@ class User < ApplicationRecord
       return
     end
     errors.add(:phone, 'is required')
+  end
+
+  def common_password?
+    common = File.join(Rails.root, 'config', '100000d.txt')
+    File.readlines(common).each do |line|
+      if self.password == line.chomp
+        errors.add(:password, 'is too common')
+        return
+      end
+    end
   end
 
   def as_json(options = {})
