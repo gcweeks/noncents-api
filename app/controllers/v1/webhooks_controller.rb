@@ -71,9 +71,10 @@ class V1::WebhooksController < ApplicationController
     end
 
     @dwolla_url = @@url
-    logger.info
-    SlackHelper.log("Sent `"+params[:topic]+
-      "` email to "+@webhook_user.fname+" "+@webhook_user.lname)
+    text = "Sent `"+params[:topic]+
+      "` email to "+@webhook_user.fname+" "+@webhook_user.lname
+    logger.info text
+    SlackHelper.log(text)
     head :ok
     # send(response_hash[params[:topic]])
   end
