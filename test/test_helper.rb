@@ -93,6 +93,14 @@ class ActiveSupport::TestCase
       name:'Plaid Savings'
     }
     stub_dwolla :post, 'customers/'+dwolla_id+'/funding-sources', body: body, status: 201, response_headers: json
+    json = fixture('dwolla_add_premier_checking')
+    body = {
+      routingNumber:'021000021',
+      accountNumber:'9900005204',
+      type:'checking',
+      name:'Plaid Premier Checking'
+    }
+    stub_dwolla :post, 'customers/'+dwolla_id+'/funding-sources', body: body, status: 201, response_headers: json
 
     # Remove funding source
     fs_json = fixture_json('dwolla_get_funding_sources')
