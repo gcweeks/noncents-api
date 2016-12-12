@@ -354,6 +354,59 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['address']['zip'], @user.address.zip
   end
 
+  test 'should set feeling' do
+    # Requires auth
+    put 'me/feeling'
+    assert_response :unauthorized
+
+    month = Date.current.beginning_of_month
+    agexes = [
+      @user.agexes.create(month: month, vice: Vice.all[0]),
+      @user.agexes.create(month: month, vice: Vice.all[1])
+    ]
+
+    # No month
+    put 'me/feeling', headers: @headers, params: { feeling: '0' }
+    assert_response :bad_request
+
+    # No feeling
+    put 'me/feeling', headers: @headers, params: { month: month.to_s }
+    assert_response :bad_request
+
+    # Bad month format
+    put 'me/feeling', headers: @headers, params: {
+      month: '2016-01',
+      feeling: '0'
+    }
+    assert_response :bad_request
+
+    # Bad feeling format
+    put 'me/feeling', headers: @headers, params: {
+      month: month.to_s,
+      feeling: 'a'
+    }
+    assert_response :bad_request
+    put 'me/feeling', headers: @headers, params: {
+      month: month.to_s,
+      feeling: '-1'
+    }
+    assert_response :bad_request
+    put 'me/feeling', headers: @headers, params: {
+      month: month.to_s,
+      feeling: '4'
+    }
+    assert_response :bad_request
+
+    # Good request
+    agexes.each { |a| a.reload; assert_equal a.feeling, 0 }
+    put 'me/feeling', headers: @headers, params: {
+      month: month.to_s,
+      feeling: '3'
+    }
+    assert_response :ok
+    agexes.each { |a| a.reload; assert_equal a.feeling, 3 }
+  end
+
   test 'should auth with plaid' do
     # product = 'auth'
     should_create_plaid('auth')

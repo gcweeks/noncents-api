@@ -76,6 +76,43 @@ class V1::UsersController < ApplicationController
     render json: addr.errors, status: :unprocessable_entity
   end
 
+  def set_feeling
+    errors = {}
+    if params[:month].present?
+      begin
+        date = Date.parse(params[:month])
+      rescue ArgumentError
+        (errors[:month] ||= []).push('must be in format YYYY-MM-DD')
+      end
+    else
+      (errors[:month] ||= []).push('is required')
+    end
+    if params[:feeling].present?
+      feeling = params[:feeling].to_i
+      bad_param = if params[:feeling].is_a? String
+                    # Check if string can be converted into integer
+                    feeling.to_s != params[:feeling]
+                  else
+                    false
+                  end
+      num_feelings = 3
+      if bad_param || !feeling.between?(0, num_feelings)
+        (errors[:feeling] ||= []).push('must be a number between 0 and '+num_feelings.to_s)
+      end
+    else
+      (errors[:feeling] ||= []).push('is required')
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    date = date.beginning_of_month
+    agexes = @authed_user.agexes.where(month: date)
+    agexes.each do |agex|
+      agex.feeling = feeling
+      agex.save!
+    end
+    render json: agexes, status: :ok
+  end
+
   # POST users/me/plaid
   def plaid
     errors = {}

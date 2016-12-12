@@ -30,6 +30,7 @@ Rails.application.routes.draw do
         get    'yearly_fund'              => 'users#get_yearly_fund'
         put    'vices'                    => 'users#set_vices'
         put    'address'                  => 'users#set_address'
+        put    'feeling'                  => 'users#set_feeling'
         post   'plaid'                    => 'users#plaid'
         post   'plaid_upgrade'            => 'users#plaid_upgrade'
         post   'plaid_mfa'                => 'users#plaid_mfa'
