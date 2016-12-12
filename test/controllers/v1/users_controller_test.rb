@@ -1091,7 +1091,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
   test 'should refresh transactions dev' do
     # Requires auth
-    # TODO: Fake transactions
     post 'me/dev_refresh_transactions'
     assert_response :unauthorized
 
@@ -1110,7 +1109,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     vices = %w(None)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
-    # TODO: Fake transactions
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
     @user.reload
@@ -1120,7 +1118,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     vices = %w(CoffeeShops)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
-    # TODO: Fake transactions
+
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
     @user.reload
@@ -1179,7 +1177,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
 
-    # TODO: Fake transactions
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
     @user.reload
@@ -1307,7 +1304,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
 
-    # TODO: Fake transactions
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
     @user.reload
