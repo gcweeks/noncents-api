@@ -95,7 +95,7 @@ class V1::UsersController < ApplicationController
                   else
                     false
                   end
-      num_feelings = 3
+      num_feelings = 5
       if bad_param || !feeling.between?(0, num_feelings)
         (errors[:feeling] ||= []).push('must be a number between 0 and '+num_feelings.to_s)
       end

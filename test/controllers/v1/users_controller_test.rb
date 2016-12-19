@@ -393,7 +393,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     put 'me/feeling', headers: @headers, params: {
       month: month.to_s,
-      feeling: '4'
+      feeling: '6'
     }
     assert_response :bad_request
 
@@ -401,10 +401,10 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     agexes.each { |a| a.reload; assert_equal a.feeling, 0 }
     put 'me/feeling', headers: @headers, params: {
       month: month.to_s,
-      feeling: '3'
+      feeling: '5'
     }
     assert_response :ok
-    agexes.each { |a| a.reload; assert_equal a.feeling, 3 }
+    agexes.each { |a| a.reload; assert_equal a.feeling, 5 }
   end
 
   test 'should auth with plaid' do
