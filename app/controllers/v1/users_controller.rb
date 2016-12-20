@@ -171,7 +171,12 @@ class V1::UsersController < ApplicationController
                                       pin: pin,
                                       options: options)
     rescue Plaid::PlaidError => e
-      raise get_plaid_error(e)
+      # Check if we should send notification for Plaid error
+      if plaid_error = get_plaid_error(e)
+        raise plaid_error
+      else
+        return render json: e.resolve, status: :bad_request
+      end
     end
 
     ret = mfa_or_populate(@authed_user,
@@ -221,7 +226,12 @@ class V1::UsersController < ApplicationController
       existing_user = Plaid::User.load(existing_product, account.bank.access_token)
       new_user = existing_user.upgrade(product)
     rescue Plaid::PlaidError => e
-      raise get_plaid_error(e)
+      # Check if we should send notification for Plaid error
+      if plaid_error = get_plaid_error(e)
+        raise plaid_error
+      else
+        return render json: e.resolve, status: :bad_request
+      end
     end
 
     ret = mfa_or_populate(@authed_user, new_user, params[:product])
@@ -252,7 +262,12 @@ class V1::UsersController < ApplicationController
     begin
       plaid_user = Plaid::User.load(product, params[:access_token])
     rescue Plaid::PlaidError => e
-      raise get_plaid_error(e)
+      # Check if we should send notification for Plaid error
+      if plaid_error = get_plaid_error(e)
+        raise plaid_error
+      else
+        return render json: e.resolve, status: :bad_request
+      end
     end
 
     if params[:answer].present?
@@ -270,7 +285,12 @@ class V1::UsersController < ApplicationController
       begin
         plaid_user.mfa_step(params[:answer], options: options)
       rescue Plaid::PlaidError => e
-        raise get_plaid_error(e)
+        # Check if we should send notification for Plaid error
+        if plaid_error = get_plaid_error(e)
+          raise plaid_error
+        else
+          return render json: e.resolve, status: :bad_request
+        end
       end
     else # Selecting send_method for MFA code
       method = if params[:mask].present?
@@ -282,7 +302,12 @@ class V1::UsersController < ApplicationController
       begin
         plaid_user.mfa_step(send_method: method, options: options)
       rescue Plaid::PlaidError => e
-        raise get_plaid_error(e)
+        # Check if we should send notification for Plaid error
+        if plaid_error = get_plaid_error(e)
+          raise plaid_error
+        else
+          return render json: e.resolve, status: :bad_request
+        end
       end
     end
 

@@ -38,10 +38,19 @@ module UserHelper
 
   def get_plaid_error(e)
     errors = {
-      'code' => 'e.code',
+      'code' => e.code,
       'message' => e.message,
       'resolve' => e.resolve
     }
+    # Don't send Slack notifications for common cases
+    common = [
+      1200 # invalid credentials
+    ]
+    if common.include? e.code
+      logger.info errors
+      return nil
+    end
+
     return case e
     when Plaid::BadRequestError
       BadRequest.new(errors)
