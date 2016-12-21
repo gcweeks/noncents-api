@@ -1176,6 +1176,13 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     assert_operator @user.transactions.size, :>, 0
+    num_transactions = @user.transactions.size
+
+    # Ensure duplicate transactions are not added
+    post 'me/dev_refresh_transactions', headers: @headers
+    assert_response :success
+    @user.reload
+    assert_equal @user.transactions.size, num_transactions
   end
 
   test 'should populate dev' do
