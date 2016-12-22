@@ -421,27 +421,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     password = 'plaid_good'
     type = 'chase'
 
-    json = fixture('plaid_mfa_list')
-    options = (product=='auth') ? "{\"list\":true}" : "{\"login_only\":true,\"list\":true}"
-    body = {
-      username: username,
-      password: password,
-      type: 'chase',
-      options: options
-    }
-    # Status of 201 required for it to be considered MFA
-    stub_plaid :post, product, body: body, status: 201, response: json
-
-    json = fixture('plaid_' + product + '_add')
-    options = (product=='auth') ? "{}" : "{\"login_only\":true}"
-    body = {
-      username: username,
-      password: password,
-      type: 'wells',
-      options: options
-    }
-    stub_plaid :post, product, body: body, response: json
-
     # Requires auth
     post 'me/plaid'
     assert_response :unauthorized
@@ -533,7 +512,6 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     username = 'plaid_test'
     password = 'plaid_good'
     type = 'wells' # No MFA
-
 
     # Send initial call
     post 'me/plaid', headers: @headers, params: {

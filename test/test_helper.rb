@@ -147,20 +147,20 @@ class ActiveSupport::TestCase
     initialize_plaid_stubs_by_product('auth')
     initialize_plaid_stubs_by_product('connect')
 
-    json = fixture('plaid_get')
+    wells_json = fixture('plaid_get')
     body = {
-      access_token: 'test_chase',
+      access_token: 'test_wells',
       options: "{\"pending\":false}"
     }
-    stub_plaid :post, 'connect/get', body: body, response: json
+    stub_plaid :post, 'connect/get', body: body, response: wells_json
     body[:options] = "{\"pending\":false,\"gte\":\""+(Date.current-2.weeks).to_s+
                      "\",\"lte\":\""+Date.current.to_s+"\"}"
-    stub_plaid :post, 'connect/get', body: body, response: json
+    stub_plaid :post, 'connect/get', body: body, response: wells_json
   end
 
   def initialize_plaid_stubs_by_product(product)
     # Plaid Add
-    json = fixture('plaid_mfa_list')
+    chase_json = fixture('plaid_mfa_list')
     options = (product=='auth') ? "{\"list\":true}" : "{\"login_only\":true,\"list\":true}"
     body = {
       username: 'plaid_test',
@@ -169,30 +169,30 @@ class ActiveSupport::TestCase
       options: options
     }
     # Status of 201 required for it to be considered MFA
-    stub_plaid :post, product, body: body, status: 201, response: json
+    stub_plaid :post, product, body: body, status: 201, response: chase_json
 
     # Plaid MFA
-    json = fixture('plaid_mfa_code_sent')
+    chase_json = fixture('plaid_mfa_code_sent')
     body = {
       access_token: 'test_chase',
       options: "{\"send_method\":{\"type\":\"email\"}}"
     }
-    stub_plaid :post, product+'/step', body: body, response: json
+    stub_plaid :post, product+'/step', body: body, response: chase_json
     body[:options] = "{\"send_method\":{\"mask\":\"xxx-xxx-5309\"}}"
-    stub_plaid :post, product+'/step', body: body, response: json
+    stub_plaid :post, product+'/step', body: body, response: chase_json
 
     # Wrong MFA
-    json = fixture('plaid_mfa_code_incorrect')
+    chase_json = fixture('plaid_mfa_code_incorrect')
     options = (product=='auth') ? "{}" : "{\"login_only\":true}"
     body = {
       access_token: 'test_chase',
       mfa: 'wrong',
       options: options
     }
-    stub_plaid :post, product+'/step', body: body, status: 402, response: json
+    stub_plaid :post, product+'/step', body: body, status: 402, response: chase_json
 
     # No MFA
-    json = fixture('plaid_' + product + '_add')
+    wells_json = fixture('plaid_' + product + '_add')
     options = (product=='auth') ? "{}" : "{\"login_only\":true}"
     body = {
       username: 'plaid_test',
@@ -200,26 +200,20 @@ class ActiveSupport::TestCase
       type: 'wells', # No MFA
       options: options
     }
-    stub_plaid :post, product, body: body, response: json
+    stub_plaid :post, product, body: body, response: wells_json
 
-    # Plaid Upgrade
-    body = {
-      access_token: 'test_chase',
-      upgrade_to: product
-    }
-    stub_plaid :post, 'upgrade', body: body, response: json
 
     # Correct MFA
-    json.sub! 'test_wells', 'test_chase'
+    chase_json = fixture('plaid_' + product + '_add').sub 'test_wells', 'test_chase'
     body = {
       access_token: 'test_chase',
       mfa: '1234',
       options: options
     }
-    stub_plaid :post, product+'/step', body: body, response: json
+    stub_plaid :post, product+'/step', body: body, response: chase_json
 
     # MFA Questions
-    json = fixture('plaid_mfa_questions')
+    bofa_json = fixture('plaid_mfa_questions')
     body = {
       username: 'plaid_test',
       password: 'plaid_good',
@@ -227,13 +221,21 @@ class ActiveSupport::TestCase
       options: options
     }
     # Status of 201 required for it to be considered MFA
-    stub_plaid :post, product, body: body, status: 201, response: json
+    stub_plaid :post, product, body: body, status: 201, response: bofa_json
     body = {
       access_token: 'test_bofa',
       mfa: 'again',
       options: options
     }
-    stub_plaid :post, product+'/step', body: body, status: 201, response: json
+    stub_plaid :post, product+'/step', body: body, status: 201, response: bofa_json
+
+    # Plaid Upgrade
+    wells_json = fixture('plaid_' + product + '_add')
+    body = {
+      access_token: 'test_wells',
+      upgrade_to: product
+    }
+    stub_plaid :post, 'upgrade', body: body, response: wells_json
   end
 
   # Add more helper methods to be used by all tests here...
