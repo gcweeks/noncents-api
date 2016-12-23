@@ -236,6 +236,9 @@ class User < ApplicationRecord
       # Skip fetching transactions for bank accounts that haven't been
       # authorized by Plaid to provide them.
       next if !bank.plaid_connect || bank.plaid_needs_reauth
+      # Skip fetching transactions for accounts that are not designated to be
+      # tracked
+      next unless bank.accounts.map(&:tracking).include?(true)
 
       plaid_user = Plaid::User.load(:connect, bank.access_token)
       # Get Plaid transactions
@@ -285,14 +288,14 @@ class User < ApplicationRecord
         next unless plaid_transaction.amount > 0.0
         # Skip Transactions created more than 2 weeks ago
         next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
+        # Get Account associated with Transaction
+        account = self.accounts.find_by(plaid_id: plaid_transaction.account_id)
+        # Skip Transactions for Accounts we are not tracking
+        next unless account && account.tracking
         # Skip Transactions that the User already has, including archived
         # Transactions.
         transaction_ids = self.transactions.map(&:plaid_id)
         next if transaction_ids.include? plaid_transaction.id
-        # Skip Transactions for Accounts that the User has not told us to track
-        account_ids = self.accounts.map(&:plaid_id)
-        # Skip transactions that don't apply to the User's Accounts
-        next unless account_ids.include? plaid_transaction.account_id
         # Get Vice model via category, subcategory, and sub-subcategory
         vice = get_vice(plaid_transaction.category_hierarchy[0],
                         plaid_transaction.category_hierarchy[1],
@@ -302,7 +305,6 @@ class User < ApplicationRecord
         next unless self.vices.include? vice
         # Create Transaction
         transaction = Transaction.from_plaid(plaid_transaction)
-        account = Account.find_by(plaid_id: plaid_transaction.account_id)
         transaction.account = account
         transaction.vice = vice
         transaction.user = self

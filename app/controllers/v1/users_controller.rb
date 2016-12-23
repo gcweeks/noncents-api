@@ -729,7 +729,6 @@ class V1::UsersController < ApplicationController
     amount_to_invest = 0.0
     transactions_to_invest = []
     @authed_user.transactions.each do |transaction|
-
       if transaction.archived
         # Re-archive in order to delete the Transaction if it is too old
         transaction.archive!

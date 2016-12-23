@@ -1204,7 +1204,13 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     assert_not_equal @user.accounts.size, 0 # Has at least one bank account now
 
-    # Get transactions without vices
+    # Track all Accounts
+    put 'me/accounts', headers: @headers, params: {
+      tracking: @user.accounts.map(&:id)
+    }
+    assert_response :success
+
+    # Get Transactions without vices
     vices = %w(None)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
@@ -1213,7 +1219,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     assert_equal @user.transactions.size, 0
 
-    # Get transactions with vice
+    # Get Transactions with vice
     vices = %w(CoffeeShops)
     put 'me/vices', headers: @headers, params: { vices: vices }
     assert_response :success
@@ -1224,11 +1230,23 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_operator @user.transactions.size, :>, 0
     num_transactions = @user.transactions.size
 
-    # Ensure duplicate transactions are not added
+    # Ensure duplicate Transactions are not added
     post 'me/dev_refresh_transactions', headers: @headers
     assert_response :success
     @user.reload
     assert_equal @user.transactions.size, num_transactions
+
+    @user.transactions.each {|t| t.destroy}
+    # Untrack all Accounts
+    delete 'me/accounts', headers: @headers, params: {
+      tracking: @user.accounts.map(&:id)
+    }
+    assert_response :success
+    # Ensure no Transactions are added, due to no Account being tracked
+    post 'me/dev_refresh_transactions', headers: @headers
+    assert_response :success
+    @user.reload
+    assert_equal @user.transactions.size, 0
   end
 
   test 'should populate dev' do
@@ -1269,7 +1287,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Set accounts as source/deposit
     put 'me/accounts', headers: @headers, params: {
       source: account_0.id,
-      deposit: account_1.id
+      deposit: account_1.id,
+      tracking: [account_0.id, account_1.id]
     }
     assert_response :success
     account_0.reload
@@ -1296,7 +1315,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     # Beef up amount so we meet Dwolla $1 transfer threshold
     @user.transactions.each do |tx|
-      tx.amount += 10.0
+      tx.amount *= 10.0
       tx.save!
     end
 
@@ -1308,6 +1327,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
         amount_to_invest += amount.round(2)
       end
     end
+    assert_operator amount_to_invest, :>=, 1.0
     balance = DwollaHelper.get_balance_funding_source(@user)
     json = fixture('dwolla_transfer')
     body = {
@@ -1401,7 +1421,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Set accounts as source/deposit
     put 'me/accounts', headers: @headers, params: {
       source: checking.id,
-      deposit: savings.id
+      deposit: savings.id,
+      tracking: [checking.id, savings.id]
     }
     assert_response :success
 
