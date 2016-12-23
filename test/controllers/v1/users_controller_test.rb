@@ -1095,7 +1095,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'should refresh transactions' do
-    # Not implemented
+    # Sufficiently implemented in 'should refresh transactions dev'
   end
 
   test 'should register push token' do
@@ -1372,18 +1372,17 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal DwollaTransaction.all.count, 1
     # TODO:
-    # dwolla_tx = DwollaTransaction.all.first
-    #
+    dwolla_tx = DwollaTransaction.all.first
+
     # Switch to the Webhook controller to fake a webhook
-    # old_controller = @controller
-    # @controller = WebhooksController.new
-    # post 'webhooks/dwolla', params: {
-    #   topic: 'customer_bank_transfer_completed',
-    #   resourceId: dwolla_tx.dwolla_id
-    # }
-    # assert_response :success
-    # # Restore the original controller
-    # @controller = old_controller
+    host! host.sub('users', 'webhooks')
+    post 'dwolla', params: {
+      topic: 'customer_bank_transfer_completed',
+      resourceId: dwolla_tx.dwolla_id
+    }
+    assert_response :success
+    # Restore the original controller
+    host! host.sub('webhooks', 'users')
   end
 
   test 'should aggregate funds dev' do
