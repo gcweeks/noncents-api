@@ -235,33 +235,40 @@ class User < ApplicationRecord
     self.banks.each do |bank|
       # Skip fetching transactions for bank accounts that haven't been
       # authorized by Plaid to provide them.
-      next unless bank.plaid_connect
+      next if !bank.plaid_connect || bank.plaid_needs_reauth
 
-      # Get Plaid model
+      plaid_user = Plaid::User.load(:connect, bank.access_token)
+      # Get Plaid transactions
       begin
-        plaid_user = Plaid::User.load(:connect, bank.access_token)
         transactions = plaid_user.transactions(start_date: Date.current-2.weeks,
                                                end_date: Date.current)
       rescue Plaid::PlaidError => e
-        status = case e
-        when Plaid::BadRequestError
-          'bad_request'
-        when Plaid::UnauthorizedError
-          'unauthorized'
-        when Plaid::RequestFailedError
-          'payment_required'
-        when Plaid::NotFoundError
-          'not_found'
-        when Plaid::ServerError
-          'internal_server_error'
+        if e.code == 1215
+          # Invalid credentials, need to submit PATCH call to resolve
+          bank.plaid_needs_reauth = true
+          bank.save!
+          next
         else
-          'internal_server_error'
+          status = case e
+          when Plaid::BadRequestError
+            'bad_request'
+          when Plaid::UnauthorizedError
+            'unauthorized'
+          when Plaid::RequestFailedError
+            'payment_required'
+          when Plaid::NotFoundError
+            'not_found'
+          when Plaid::ServerError
+            'internal_server_error'
+          else
+            'internal_server_error'
+          end
+          logger.warn 'Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
+            e.resolve + ' [' + status + ']'
+          SlackHelper.log("Plaid Error\n`" + e.code.to_s + "`\n```" + e.message +
+            "\n" + e.resolve + "\n" + status + "```")
+          next
         end
-        logger.warn 'Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
-          e.resolve + ' [' + status + ']'
-        SlackHelper.log("Plaid Error\n`" + e.code.to_s + "\n```" + e.message +
-          "```\n```" + e.resolve + "```\n```" + status + "```")
-        next
       rescue => e
         logger.warn e.inspect
         SlackHelper.log('User.refresh_transactions error: ```' +

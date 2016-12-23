@@ -34,6 +34,7 @@ Rails.application.routes.draw do
         post   'plaid'                    => 'users#plaid'
         post   'plaid_upgrade'            => 'users#plaid_upgrade'
         post   'plaid_mfa'                => 'users#plaid_mfa'
+        put    'plaid_update'             => 'users#plaid_update'
         put    'accounts'                 => 'users#update_accounts'
         delete 'accounts'                 => 'users#remove_accounts'
         post   'dwolla'                   => 'users#dwolla'

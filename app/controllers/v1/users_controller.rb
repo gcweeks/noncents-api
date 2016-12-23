@@ -179,9 +179,7 @@ class V1::UsersController < ApplicationController
       end
     end
 
-    ret = mfa_or_populate(@authed_user,
-                          plaid_user,
-                          params[:product],
+    ret = mfa_or_populate(@authed_user, plaid_user, params[:product],
                           params[:type])
     raise ret if ret.class <= Error
     render json: ret, status: :ok
@@ -312,7 +310,61 @@ class V1::UsersController < ApplicationController
     end
 
     ret = mfa_or_populate(@authed_user, plaid_user, params[:product])
+    raise ret if ret.class <= Error
     render json: ret, status: :ok
+  end
+
+  # PUT users/me/plaid_update
+  def plaid_update
+    errors = {}
+    errors[:username] = ['is required'] if params[:username].blank?
+    errors[:password] = ['is required'] if params[:password].blank?
+    if params[:bank_id].blank?
+      errors[:bank_id] = ['is required']
+    else
+      bank = Bank.where(id: params[:bank_id]).first
+      if bank.blank? || bank.user != @authed_user
+        raise NotFound
+      end
+      if bank.name == 'usaa'
+        errors[:pin] = ['is required for usaa'] if params[:pin].blank?
+      end
+      if !bank.plaid_needs_reauth
+        errors[:general] = ['Bank not in need of update']
+      end
+      if !bank.plaid_connect && !bank.plaid_auth
+        errors[:general] = ['Bank cannot be updated']
+      end
+    end
+    raise BadRequest.new(errors) if errors.present?
+
+    if bank.plaid_auth
+      plaid_user = Plaid::User.load(:auth, bank.access_token)
+      # If both auth and connect, just loading one should suffice for this call
+    else # Connect, otherwise BadRequest would be raised
+      plaid_user = Plaid::User.load(:connect, bank.access_token)
+    end
+
+    pin = params[:pin].to_s if params[:pin].present?
+
+    begin
+      plaid_user.update(params[:username].to_s, params[:password].to_s, pin)
+    rescue Plaid::PlaidError => e
+      # Check if we should send notification for Plaid error
+      if plaid_error = get_plaid_error(e)
+        raise plaid_error
+      else
+        return render json: e.resolve, status: :bad_request
+      end
+    end
+
+    # Success, set bank reauth back to false
+    bank.access_token = plaid_user.access_token # set for good measure
+    bank.plaid_needs_reauth = false
+    bank.save!
+
+    @authed_user.reload
+    render json: @authed_user, status: :ok
   end
 
   # PUT users/me/accounts

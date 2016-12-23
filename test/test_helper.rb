@@ -236,6 +236,14 @@ class ActiveSupport::TestCase
       upgrade_to: product
     }
     stub_plaid :post, 'upgrade', body: body, response: wells_json
+
+    # Plaid Update Credentials
+    body = {
+      access_token: 'test_wells',
+      username: 'plaid_test',
+      password: 'plaid_good'
+    }
+    stub_plaid :patch, product, body: body, response: wells_json
   end
 
   # Add more helper methods to be used by all tests here...

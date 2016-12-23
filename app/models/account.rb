@@ -17,6 +17,7 @@ class Account < ApplicationRecord
     }.merge(options))
     json['plaid_auth'] = self.bank.plaid_auth
     json['plaid_connect'] = self.bank.plaid_connect
+    json['plaid_needs_reauth'] = self.bank.plaid_needs_reauth
     json
   end
 end

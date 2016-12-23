@@ -680,6 +680,74 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['mfa_type'], 'questions'
   end
 
+  test 'should update plaid credentials' do
+    username = 'plaid_test'
+    password = 'plaid_good'
+    product = 'connect'
+    type = 'wells' # No MFA
+
+    # Add initial account
+    post 'me/plaid', headers: @headers, params: {
+      username: username,
+      password: password,
+      product: product,
+      type: type
+    }
+    assert_response :success
+    @user.reload
+    assert_equal @user.banks.size, 1
+    bank = @user.banks[0]
+    assert_equal bank.plaid_auth, false
+    assert_equal bank.plaid_connect, true
+
+    # Requires auth
+    put 'me/plaid_update'
+    assert_response :unauthorized
+
+    # Requires username, password, product, and type
+    put 'me/plaid_update', headers: @headers
+    assert_response :bad_request
+    put 'me/plaid_update', headers: @headers, params: {
+      username: username,
+      password: password
+    }
+    assert_response :bad_request
+    put 'me/plaid_update', headers: @headers, params: {
+      username: username,
+      bank_id: bank.id
+    }
+    assert_response :bad_request
+    put 'me/plaid_update', headers: @headers, params: {
+      password: password,
+      bank_id: bank.id
+    }
+    assert_response :bad_request
+
+    # Requires bank to be in reauth state
+    assert_equal bank.plaid_needs_reauth, false
+    put 'me/plaid_update', headers: @headers, params: {
+      username: username,
+      password: password,
+      bank_id: bank.id
+    }
+    assert_response :bad_request
+
+    # Set bank to need reauth
+    bank.plaid_needs_reauth = true
+    bank.save!
+
+    # Send update
+    put 'me/plaid_update', headers: @headers, params: {
+      username: username,
+      password: password,
+      bank_id: bank.id
+    }
+    assert_response :success
+
+    bank.reload
+    assert_equal bank.plaid_needs_reauth, false
+  end
+
   test 'should update and remove accounts' do
     # Populate initial accounts
     # Tracking
