@@ -224,8 +224,7 @@ class User < ApplicationRecord
     yearly_fund = self.yearly_funds.find_by(year: year)
     return yearly_fund unless yearly_fund.blank?
     # No yearly_fund model found matching this year, create one
-    yearly_fund = self.yearly_funds.new(year: year)
-    yearly_fund.save!
+    yearly_fund = self.yearly_funds.create(year: year)
     yearly_fund
   end
 

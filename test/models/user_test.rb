@@ -143,6 +143,24 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test 'should get yearly fund' do
-    # TODO: Implement
+    user = users(:cashmoney)
+    user.generate_token
+    user.create_fund
+    user.password = 'Ca5hM0n3y'
+    user.address = addresses(:test_address)
+    user.address.save!
+    user.save!
+
+    # Test that getting non-existant yearly_fund creates one
+    year = Date.current.year
+    assert_equal user.yearly_funds.count, 0
+    yf = user.yearly_fund()
+    assert_equal user.yearly_funds.count, 1
+    assert_equal yf.year, year
+
+    # Test that getting existing yearly_fund doesn't create a new one
+    new_yf = user.yearly_fund()
+    assert_equal yf.id, new_yf.id
+    assert_equal user.yearly_funds.count, 1
   end
 end

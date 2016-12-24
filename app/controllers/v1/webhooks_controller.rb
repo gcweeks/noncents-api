@@ -17,7 +17,7 @@ class V1::WebhooksController < ApplicationController
   end
 
   def plaid
-    # TODO: Implement
+    # No action currently needed for Plaid webhooks
     logger.info params
     head :ok
   end
