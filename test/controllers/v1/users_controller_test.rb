@@ -1369,13 +1369,11 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal @user.fund.amount_invested, total_invested
     assert_equal @user.yearly_fund().amount_invested, total_invested
-
     assert_equal DwollaTransaction.all.count, 1
-    # TODO:
-    dwolla_tx = DwollaTransaction.all.first
 
     # Switch to the Webhook controller to fake a webhook
     host! host.sub('users', 'webhooks')
+    dwolla_tx = DwollaTransaction.all.first
     post 'dwolla', params: {
       topic: 'customer_bank_transfer_completed',
       resourceId: dwolla_tx.dwolla_id

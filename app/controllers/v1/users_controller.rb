@@ -578,7 +578,7 @@ class V1::UsersController < ApplicationController
     # Send Slack message
     res = http.request(req)
 
-    # TODO: Process response
+    # Log response in case of issues
     logger.info res
 
     head :ok

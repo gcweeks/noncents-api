@@ -1,5 +1,6 @@
 module TwilioHelper
   require 'twilio-ruby'
+  include SlackHelper
 
   def init_twilio
     @TWILIO_SID = ENV['TWILIO_SID']
@@ -37,8 +38,8 @@ module TwilioHelper
         body: body
       )
     rescue => e
-      # TODO: Log
       logger.info e.message
+      SlackHelper.log(e.message)
       return false
     end
     true
