@@ -153,7 +153,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['invest_percent'], @user.invest_percent
     assert_equal res['goal'], @user.goal
     assert_equal res['phone'], @user.phone
-    assert_not_equal res['fund'], nil
+    assert_not_nil res['fund']
   end
 
   test 'should get me' do
@@ -173,7 +173,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal res['invest_percent'], @user.invest_percent
     assert_equal res['goal'], @user.goal
     assert_equal res['phone'], @user.phone
-    assert_not_equal res['fund'], nil
+    assert_not_nil res['fund']
     assert_equal res['address']['line1'], @user.address.line1
     assert_equal res['address']['line2'], @user.address.line2
     assert_equal res['address']['city'], @user.address.city
@@ -348,7 +348,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     address[:line2] = address_orig[:line2]
     res = JSON.parse(@response.body)
     assert_equal res['address']['line1'], @user.address.line1
-    assert_equal res['address']['line2'], nil
+    assert_nil res['address']['line2']
     assert_equal res['address']['city'], @user.address.city
     assert_equal res['address']['state'], @user.address.state
     assert_equal res['address']['zip'], @user.address.zip
@@ -761,9 +761,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     # Has checking/savings now
     checking = @user.accounts.find_by(account_subtype: 'checking')
-    assert_not_equal checking, nil
+    assert_not_nil checking
     savings = @user.accounts.find_by(account_subtype: 'savings')
-    assert_not_equal savings, nil
+    assert_not_nil savings
     # Source/deposit
     post 'me/plaid_upgrade', headers: @headers, params: {
       account: checking.id, # savings.id would work too
@@ -791,8 +791,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     # Ensure no Account is set yet
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -837,8 +837,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     # Verify that setting tracking was successful
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
@@ -850,7 +850,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     assert_equal @user.source_account.id, checking.id
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -862,7 +862,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     put 'me/accounts', headers: @headers, params: { deposit: savings.id }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account, nil
+    assert_nil @user.source_account
     assert_equal @user.deposit_account.id, savings.id
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
@@ -875,8 +875,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     put 'me/accounts', headers: @headers, params: { tracking: [savings.id] }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -898,7 +898,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     delete 'me/accounts', headers: @headers, params: { source: nil }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account, nil
+    assert_nil @user.source_account
     assert_equal @user.deposit_account.id, savings.id
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
@@ -911,7 +911,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     assert_equal @user.source_account.id, checking.id
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
     account = Account.find_by(id: savings.id)
@@ -945,17 +945,17 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     # Has checking/savings now
     checking = @user.accounts.find_by(account_subtype: 'checking')
-    assert_not_equal checking, nil
+    assert_not_nil checking
     savings = @user.accounts.find_by(account_subtype: 'savings')
-    assert_not_equal savings, nil
+    assert_not_nil savings
 
     # Auth with Dwolla
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
     assert_response :ok
 
     # Ensure no Account is set yet
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -969,8 +969,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
 
     # Ensure Account is still not set
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -982,8 +982,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     @user.reload
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, true
     account = Account.find_by(id: savings.id)
@@ -1002,17 +1002,17 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     # Has checking/savings now
     checking = @user.accounts.find_by(account_subtype: 'checking')
-    assert_not_equal checking, nil
+    assert_not_nil checking
     savings = @user.accounts.find_by(account_subtype: 'savings')
-    assert_not_equal savings, nil
+    assert_not_nil savings
 
     # Auth with Dwolla
     post 'me/dwolla', headers: @headers, params: { ssn: '123-45-6789' }
     assert_response :ok
 
     # Ensure no Account is set yet
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -1026,8 +1026,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
 
     # Ensure Account is still not set
-    assert_equal @user.source_account, nil
-    assert_equal @user.deposit_account, nil
+    assert_nil @user.source_account
+    assert_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -1040,8 +1040,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     @user.reload
-    assert_not_equal @user.source_account, nil
-    assert_not_equal @user.deposit_account, nil
+    assert_not_nil @user.source_account
+    assert_not_nil @user.deposit_account
     account = Account.find_by(id: checking.id)
     assert_equal account.tracking, false
     account = Account.find_by(id: savings.id)
@@ -1073,7 +1073,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     res = JSON.parse(@response.body)
     assert_equal res['address'], ['is required']
-    assert_equal nil, @user.dwolla_status
+    assert_nil @user.dwolla_status
 
     # Address in payload
     post 'me/dwolla', headers: @headers, params: {
@@ -1087,7 +1087,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal address[:city], @user.address.city
     assert_equal address[:state], @user.address.state
     assert_equal address[:zip], @user.address.zip
-    assert_not_equal nil, @user.dwolla_status
+    assert_not_nil @user.dwolla_status
   end
 
   test 'should upload dwolla document' do
@@ -1112,7 +1112,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure no token already exists
     fcm_token_string_1 = '1234'
     fcm_token = FcmToken.find_by(token: fcm_token_string_1)
-    assert_equal fcm_token, nil
+    assert_nil fcm_token
 
     # Register token
     post 'me/register_push_token', headers: @headers, params: {
@@ -1125,7 +1125,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure token was successfully registered
     @user.reload
     fcm_token = FcmToken.find_by(token: fcm_token_string_1)
-    assert_not_equal fcm_token, nil
+    assert_not_nil fcm_token
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, @user.id
 
@@ -1141,12 +1141,12 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure User still has both tokens
     # Token 1
     fcm_token = FcmToken.find_by(token: fcm_token_string_1)
-    assert_not_equal fcm_token, nil
+    assert_not_nil fcm_token
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, @user.id
     # Token 2
     fcm_token = FcmToken.find_by(token: fcm_token_string_2)
-    assert_not_equal fcm_token, nil
+    assert_not_nil fcm_token
     assert_equal fcm_token.token, fcm_token_string_2
     assert_equal fcm_token.user_id, @user.id
 
@@ -1183,7 +1183,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Ensure user_2 has token
     user_2.reload
     fcm_token = FcmToken.find_by(token: fcm_token_string_1)
-    assert_not_equal fcm_token, nil
+    assert_not_nil fcm_token
     assert_equal fcm_token.token, fcm_token_string_1
     assert_equal fcm_token.user_id, user_2.id
   end
@@ -1273,9 +1273,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     account_0 = @user.accounts.find_by(name: 'Plaid Savings')
-    assert_not_equal account_0, nil
+    assert_not_nil account_0
     account_1 = @user.accounts.find_by(name: 'Plaid Checking')
-    assert_not_equal account_1, nil
+    assert_not_nil account_1
 
     # Auth Accounts with Plaid
     post 'me/plaid_upgrade', headers: @headers, params: {
@@ -1294,8 +1294,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     account_0.reload
     account_1.reload
     # Ensure both accounts were authed with Dwolla
-    assert_not_equal account_0.dwolla_id, nil
-    assert_not_equal account_1.dwolla_id, nil
+    assert_not_nil account_0.dwolla_id
+    assert_not_nil account_1.dwolla_id
 
     # Set Vices
     vices = %w(CoffeeShops)
@@ -1404,9 +1404,9 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     # Has checking/savings now
     checking = @user.accounts.find_by(account_subtype: 'checking')
-    assert_not_equal checking, nil
+    assert_not_nil checking
     savings = @user.accounts.find_by(account_subtype: 'savings')
-    assert_not_equal savings, nil
+    assert_not_nil savings
 
     # Auth Accounts with Plaid
     post 'me/plaid_upgrade', headers: @headers, params: {

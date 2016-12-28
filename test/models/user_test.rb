@@ -98,9 +98,9 @@ class UserTest < ActiveSupport::TestCase
     user = users(:cashmoney)
 
     # Token
-    assert_equal user.token, nil
+    assert_nil user.token
     user.generate_token
-    assert_not_equal user.token, nil
+    assert_not_nil user.token
   end
 
   test 'should create dwolla account' do
@@ -114,24 +114,24 @@ class UserTest < ActiveSupport::TestCase
 
     initialize_dwolla_stubs(user)
 
-    assert_equal user.dwolla_id, nil
-    assert_equal user.dwolla_status, nil
+    assert_nil user.dwolla_id
+    assert_nil user.dwolla_status
 
     # Bad input
     ret = user.dwolla_create(nil, '127.0.0.1')
     assert_equal ret, false
-    assert_equal user.dwolla_id, nil
-    assert_equal user.dwolla_status, nil
+    assert_nil user.dwolla_id
+    assert_nil user.dwolla_status
     ret = user.dwolla_create('123-45-6789', nil)
     assert_equal ret, false
-    assert_equal user.dwolla_id, nil
-    assert_equal user.dwolla_status, nil
+    assert_nil user.dwolla_id
+    assert_nil user.dwolla_status
 
     # Correct input
     ret = user.dwolla_create('123-45-6789', '127.0.0.1')
     assert_equal ret, true
-    assert_not_equal user.dwolla_id, nil
-    assert_not_equal user.dwolla_status, nil
+    assert_not_nil user.dwolla_id
+    assert_not_nil user.dwolla_status
   end
 
   test 'should add dwolla funding source' do

@@ -56,13 +56,13 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     post 'reset_password', params: { user: { email: 'doesnt@exist.com' } }
     assert_response :not_found
 
-    assert_equal @user.reset_password_token, nil
-    assert_equal @user.reset_password_sent_at, nil
+    assert_nil @user.reset_password_token
+    assert_nil @user.reset_password_sent_at
     post 'reset_password', params: { user: { email: @user.email } }
     assert_response :success
     @user.reload
-    assert_not_equal @user.reset_password_token, nil
-    assert_not_equal @user.reset_password_sent_at, nil
+    assert_not_nil @user.reset_password_token
+    assert_not_nil @user.reset_password_sent_at
 
     password = 'NewPa55word'
 

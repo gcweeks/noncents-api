@@ -860,9 +860,6 @@ class V1::UsersController < ApplicationController
     params.require(:address).permit(:line1, :line2, :city, :state, :zip)
   end
 
-  def plaid_login()
-  end
-
   def validate_deduction_accounts_payload(source, deposit)
     errors = {}
     if !source.nil?
