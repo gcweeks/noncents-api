@@ -383,8 +383,8 @@ class V1::UsersController < ApplicationController
     # Validate/Set Source/Deposit Accounts
     if source_account || deposit_account
       if @authed_user.dwolla_id
-        types = %w(savings checking)
         if source_account
+          types = %w(savings checking)
           if types.exclude?(source_account.account_subtype)
             errors[:source] = ['type must be one of: ' + types.join(', ')]
           elsif !source_account.bank.plaid_auth
@@ -394,6 +394,7 @@ class V1::UsersController < ApplicationController
           end
         end
         if deposit_account
+          types = %w(savings checking brokerage)
           if types.exclude?(deposit_account.account_subtype)
             errors[:deposit] = ['type must be one of: ' + types.join(', ')]
           elsif !deposit_account.bank.plaid_auth
