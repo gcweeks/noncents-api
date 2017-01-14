@@ -21,6 +21,9 @@ Rails.application.routes.draw do
       post 'plaid'  => 'webhooks#plaid'
       post 'dwolla' => 'webhooks#dwolla'
     end
+    scope 'admin' do
+      get 'metrics' => 'admin#metrics'
+    end
 
     # Model-specific calls (other than those created by resources)
     scope 'users' do

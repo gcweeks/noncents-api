@@ -18,6 +18,12 @@ class ApplicationController < ActionController::API
     return head :unauthorized unless @authed_user
   end
 
+  def restrict_access_admin
+    token = params[:access_token]
+    token = request.headers['Authorization'] unless token
+    # return head :unauthorized unless token == ENV['ADMIN_TOKEN']
+  end
+
   private
 
   def bad_request(exception)
