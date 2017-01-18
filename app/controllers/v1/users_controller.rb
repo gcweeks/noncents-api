@@ -136,12 +136,16 @@ class V1::UsersController < ApplicationController
       types = (params[:product] == 'auth') ? auth_types : connect_types
       unless types.include?(params[:type])
         errors[:type] = [
-          params[:product]+ ' type must be one of: ' + types.join(', '),
+          params[:product] + ' type must be one of: ' + types.join(', '),
           'cannot be ' + params[:type].to_s
         ]
       end
       if params[:type] == 'usaa'
         errors[:pin] = ['is required for usaa'] if params[:pin].blank?
+      end
+      existing_types = @authed_user.banks.map(&:name)
+      if existing_types.include?(params[:type])
+        errors[:type] = ['has already been added']
       end
     end
     raise BadRequest.new(errors) if errors.present?

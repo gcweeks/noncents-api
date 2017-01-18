@@ -498,6 +498,14 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     @user.accounts.each do |account|
       assert_equal account.bank_id, bank.id
     end
+    # Cannot add same bank twice
+    post 'me/plaid', headers: @headers, params: {
+      username: username,
+      password: password,
+      product: product,
+      type: type
+    }
+    assert_response :bad_request
   end
 
   test 'should upgrade plaid auth to connect' do
