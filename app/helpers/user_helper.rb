@@ -19,7 +19,7 @@ module UserHelper
     end
 
     # No MFA required
-    ret = populate_user_accounts(user, plaid_user)
+    ret = user.populate_accounts(plaid_user)
     # 'ret' will either be a successfully saved User model or an ActiveRecord
     # error hash.
     raise InternalServerError.new(ret) unless ret.is_a?(User)
@@ -65,56 +65,5 @@ module UserHelper
     else
       InternalServerError.new(errors)
     end
-  end
-
-  private
-
-  def populate_user_accounts(user, plaid_user)
-    # This method idempotently populates user's Accounts with accounts given in
-    # plaid_user (for either Connect or Auth), then returns either a
-    # successfully saved User model or an error hash.
-    plaid_user.accounts.each do |plaid_account|
-      # Get existing Account or create new one
-      account = nil
-      if user.accounts
-        user.accounts.each do |user_account|
-          if plaid_account.id == user_account.plaid_id
-            account = user_account
-            break
-          end
-        end
-      end
-      # Create new Account if one wasn't found in loop above
-      unless account
-        account = user.accounts.new
-        bank = user.banks.find_by(access_token: plaid_user.access_token)
-        # Will get caught by validation below if bank is not found
-        account.bank = bank
-        account.plaid_id = plaid_account.id
-      end
-
-      # Populate Account details (or update details if Account already exists)
-      account.name = plaid_account.meta['name']
-      account.account_type = plaid_account.type.to_s
-      account.account_subtype = plaid_account.subtype
-      account.institution = plaid_account.institution.to_s
-      account.current_balance = plaid_account.current_balance
-      if plaid_account.available_balance
-        account.available_balance = plaid_account.available_balance
-      end
-      if plaid_account.numbers.present? # Auth
-        account.routing_num = plaid_account.numbers[:routing]
-        account.account_num = plaid_account.numbers[:account]
-        if account.account_num && account.account_num.length > 4
-          account.account_num_short = account.account_num[-4..-1]
-        end
-      elsif plaid_account.meta['number'].present? # Connect
-        account.account_num_short = plaid_account.meta['number']
-      end
-      return account.errors unless account.valid?
-      account.save!
-    end if plaid_user.accounts
-
-    user.reload
   end
 end

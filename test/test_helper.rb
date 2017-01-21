@@ -156,6 +156,11 @@ class ActiveSupport::TestCase
     body[:options] = "{\"pending\":false,\"gte\":\""+(Date.current-2.weeks).to_s+
                      "\",\"lte\":\""+Date.current.to_s+"\"}"
     stub_plaid :post, 'connect/get', body: body, response: wells_json
+
+    # Plaid Balance
+    balance_json = fixture('plaid_balance')
+    body = { access_token: 'test_wells' }
+    stub_plaid :post, 'balance', body: body, response: balance_json
   end
 
   def initialize_plaid_stubs_by_product(product)
@@ -201,7 +206,6 @@ class ActiveSupport::TestCase
       options: options
     }
     stub_plaid :post, product, body: body, response: wells_json
-
 
     # Correct MFA
     chase_json = fixture('plaid_' + product + '_add').sub 'test_wells', 'test_chase'

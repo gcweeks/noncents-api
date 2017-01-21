@@ -196,12 +196,21 @@ class User < ApplicationRecord
   end
 
   def dwolla_transfer(amount)
-    # Must have source/deposit accounts
+    # Must have source/deposit accounts, and amount must be at least $1.00
     unless self.source_account && self.source_account.dwolla_id &&
            self.deposit_account && self.deposit_account.dwolla_id &&
            amount >= 1.00
 
       return false
+    end
+
+    last_refreshed = self.source_account.balance_refreshed_at
+
+    if last_refreshed.nil? || self.source_account.available_balance.nil? ||
+       (Date.current - last_refreshed.to_date).to_i > 1
+
+      # Grab current balance
+      return false unless self.source_account.bank.refresh_balances
     end
 
     # Get balance funding source
@@ -251,12 +260,56 @@ class User < ApplicationRecord
     self.save!
   end
 
+  def populate_accounts(plaid_user, balance_only = false)
+    # This method idempotently populates user's Accounts with accounts given in
+    # plaid_user (for Connect/Auth/Balance), then returns either a successfully
+    # saved User model or an error hash.
+    return self unless plaid_user.accounts
+    plaid_user.accounts.each do |plaid_account|
+      # Get existing Account or create new one
+      account = get_or_create_account(plaid_account.id, plaid_user.access_token)
+
+      # Populate Account details (or update details if Account already exists)
+      account.populate(plaid_account, balance_only)
+
+      return account.errors unless account.valid?
+      account.save!
+    end
+
+    self.reload
+  end
+
   private
+
+  def get_or_create_account(account_id, access_token)
+    account = nil
+    if self.accounts
+      self.accounts.each do |user_account|
+        if account_id == user_account.plaid_id
+          account = user_account
+          break
+        end
+      end
+    end
+    # Create new Account if one wasn't found in loop above
+    unless account
+      account = self.accounts.new
+      bank = self.banks.find_by(access_token: access_token)
+      # Will get caught by save! validation if bank is not found
+      account.bank = bank
+      account.plaid_id = account_id
+    end
+
+    account
+  end
 
   def get_plaid_transactions(plaid_user, bank)
     begin
-      return plaid_user.transactions(start_date: Date.current - 2.weeks,
-                                     end_date: Date.current)
+      txs = plaid_user.transactions(start_date: Date.current - 2.weeks,
+                                    end_date: Date.current)
+      # Take this opportunity to update balance and accounts
+      self.populate_accounts(plaid_user)
+      return txs
     rescue Plaid::PlaidError => e
       if e.code == 1215
         # Invalid credentials, need to submit PATCH call to resolve

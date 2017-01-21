@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161221220115) do
+ActiveRecord::Schema.define(version: 20170121222743) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -24,15 +24,16 @@ ActiveRecord::Schema.define(version: 20161221220115) do
     t.decimal  "current_balance"
     t.string   "account_type"
     t.string   "account_subtype"
-    t.boolean  "tracking",          default: false
+    t.boolean  "tracking",             default: false
     t.string   "dwolla_id"
     t.string   "account_num"
     t.string   "routing_num"
     t.uuid     "user_id"
     t.uuid     "bank_id"
-    t.datetime "created_at",                        null: false
-    t.datetime "updated_at",                        null: false
+    t.datetime "created_at",                           null: false
+    t.datetime "updated_at",                           null: false
     t.string   "account_num_short"
+    t.datetime "balance_refreshed_at"
     t.index ["bank_id"], name: "index_accounts_on_bank_id", using: :btree
     t.index ["user_id"], name: "index_accounts_on_user_id", using: :btree
   end

@@ -1361,6 +1361,10 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     # Deduct
     assert_equal @user.fund.amount_invested, 0
     assert_equal @user.yearly_fund().amount_invested, 0
+    # Add delay to simulate an account in need of balance refresh
+    @user.source_account.balance_refreshed_at -= 1.week
+    @user.source_account.save!
+    # Perform deduction
     post 'me/dev_deduct', headers: @headers
     assert_response :success
     @user.reload
@@ -1440,11 +1444,12 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @user.reload
     # Make sure we've got a couple transactions to play with
+    # TODO: Occasional hysteresis, @user.transactions.size == 0
     assert_operator @user.transactions.size, :>=, 2
 
     # Deduct
     assert_equal @user.fund.amount_invested, 0.00
-    assert_equal @user.yearly_fund().amount_invested, 0.00
+    assert_equal @user.yearly_fund.amount_invested, 0.00
     now = Date.current
     @user.transactions.each do |tx|
       # Force date to be today to avoid accidentally being aggregated
