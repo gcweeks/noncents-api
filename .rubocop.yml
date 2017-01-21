@@ -10,6 +10,12 @@ Style/AccessorMethodName:
   Enabled: false
 Style/VariableName:
   Enabled: false
+Style/RedundantSelf:
+  Enabled: false
+Style/RaiseArgs:
+  Enabled: false
+Style/TernaryParentheses:
+  Enabled: false
 
 Metrics/ClassLength:
   Enabled: false

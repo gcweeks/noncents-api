@@ -21,8 +21,8 @@ class User < ApplicationRecord
   has_many :yearly_funds
   has_one  :address
   has_one  :fund
-  belongs_to :source_account, :class_name => "Account", optional: true
-  belongs_to :deposit_account, :class_name => "Account", optional: true
+  belongs_to :source_account, class_name: 'Account', optional: true
+  belongs_to :deposit_account, class_name: 'Account', optional: true
   has_secure_password
 
   # Validations
@@ -58,11 +58,11 @@ class User < ApplicationRecord
   end
 
   def common_password?
-    common = File.join(Rails.root, 'config', '100000d.txt')
+    common = Rails.root.join('config', '100000d.txt')
     File.readlines(common).each do |line|
       if self.password == line.chomp
         errors.add(:password, 'is too common')
-        return
+        break
       end
     end
   end
@@ -81,7 +81,7 @@ class User < ApplicationRecord
     json['deposit_account'] = deposit_account
     json['fund'] = fund
     json['source_account'] = source_account
-    json['transactions'] = transactions.reject { |t| t.archived }
+    json['transactions'] = transactions.reject(&:archived)
     json['vices'] = vices.map(&:name)
     json['yearly_funds'] = yearly_funds
     json
@@ -210,7 +210,7 @@ class User < ApplicationRecord
 
     if DwollaHelper.transfer_money(self, balance, amount.to_s)
       self.fund.deposit!(amount)
-      self.yearly_fund().deposit!(amount)
+      self.yearly_fund.deposit!(amount)
       return true
     end
     false
@@ -241,76 +241,86 @@ class User < ApplicationRecord
 
       plaid_user = Plaid::User.load(:connect, bank.access_token)
       # Get Plaid transactions
-      begin
-        transactions = plaid_user.transactions(start_date: Date.current-2.weeks,
-                                               end_date: Date.current)
-      rescue Plaid::PlaidError => e
-        if e.code == 1215
-          # Invalid credentials, need to submit PATCH call to resolve
-          bank.plaid_needs_reauth = true
-          bank.save!
-          next
-        else
-          status = case e
-          when Plaid::BadRequestError
-            'bad_request'
-          when Plaid::UnauthorizedError
-            'unauthorized'
-          when Plaid::RequestFailedError
-            'payment_required'
-          when Plaid::NotFoundError
-            'not_found'
-          when Plaid::ServerError
-            'internal_server_error'
-          else
-            'internal_server_error'
-          end
-          logger.warn 'Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
-            e.resolve + ' [' + status + ']'
-          SlackHelper.log("Plaid Error\n`" + e.code.to_s + "`\n```" + e.message +
-            "\n" + e.resolve + "\n" + status + "```")
-          next
-        end
-      rescue => e
-        logger.warn e.inspect
-        SlackHelper.log('User.refresh_transactions error: ```' +
-          e.inspect + '```')
-      end
+      txs = get_plaid_transactions(plaid_user, bank)
 
       # Push Transaction if it is from an Account that the User has added and
       # matches one of the User's Vices.
-      transactions.each do |plaid_transaction|
-        # Skip Transactions without categories, because it means we can't
-        # associate it with a Vice anyway.
-        next unless plaid_transaction.category_hierarchy
-        # Skip Transactions with negative amounts
-        next unless plaid_transaction.amount > 0.0
-        # Skip Transactions created more than 2 weeks ago
-        next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
-        # Get Account associated with Transaction
-        account = self.accounts.find_by(plaid_id: plaid_transaction.account_id)
-        # Skip Transactions for Accounts we are not tracking
-        next unless account && account.tracking
-        # Skip Transactions that the User already has, including archived
-        # Transactions.
-        transaction_ids = self.transactions.map(&:plaid_id)
-        next if transaction_ids.include? plaid_transaction.id
-        # Get Vice model via category, subcategory, and sub-subcategory
-        vice = get_vice(plaid_transaction.category_hierarchy[0],
-                        plaid_transaction.category_hierarchy[1],
-                        plaid_transaction.category_hierarchy[2])
-        # Skip all Transactions that aren't classified as a particular Vice
-        next if vice.blank?
-        next unless self.vices.include? vice
-        # Create Transaction
-        transaction = Transaction.from_plaid(plaid_transaction)
-        transaction.account = account
-        transaction.vice = vice
-        transaction.user = self
-        transaction.save!
-      end if plaid_user.transactions
+      process_transactions(txs, ignore_old) if plaid_user.transactions
     end
     self.transactions_refreshed_at = DateTime.current
     self.save!
+  end
+
+  private
+
+  def get_plaid_transactions(plaid_user, bank)
+    begin
+      return plaid_user.transactions(start_date: Date.current - 2.weeks,
+                                     end_date: Date.current)
+    rescue Plaid::PlaidError => e
+      if e.code == 1215
+        # Invalid credentials, need to submit PATCH call to resolve
+        bank.plaid_needs_reauth = true
+        bank.save!
+      else
+        status = case e
+                 when Plaid::BadRequestError
+                   'bad_request'
+                 when Plaid::UnauthorizedError
+                   'unauthorized'
+                 when Plaid::RequestFailedError
+                   'payment_required'
+                 when Plaid::NotFoundError
+                   'not_found'
+                 when Plaid::ServerError
+                   'internal_server_error'
+                 else
+                   'internal_server_error'
+                 end
+        logger.warn('Plaid Error: (' + e.code.to_s + ') ' + e.message + '. ' +
+                    e.resolve + ' [' + status + ']')
+        SlackHelper.log("Plaid Error\n`" + e.code.to_s + "`\n```" +
+          e.message + "\n" + e.resolve + "\n" + status + '```')
+      end
+    rescue => e
+      logger.warn e.inspect
+      SlackHelper.log('User.refresh_transactions error: ```' +
+        e.inspect + '```')
+    end
+
+    []
+  end
+
+  def process_transactions(txs, ignore_old)
+    txs.each do |plaid_transaction|
+      # Skip Transactions without categories, because it means we can't
+      # associate it with a Vice anyway.
+      next unless plaid_transaction.category_hierarchy
+      # Skip Transactions with negative amounts
+      next unless plaid_transaction.amount > 0.0
+      # Skip Transactions created more than 2 weeks ago
+      next if ignore_old && plaid_transaction.date < Date.current - 2.weeks
+      # Get Account associated with Transaction
+      account = self.accounts.find_by(plaid_id: plaid_transaction.account_id)
+      # Skip Transactions for Accounts we are not tracking
+      next unless account && account.tracking
+      # Skip Transactions that the User already has, including archived
+      # Transactions.
+      transaction_ids = self.transactions.map(&:plaid_id)
+      next if transaction_ids.include? plaid_transaction.id
+      # Get Vice model via category, subcategory, and sub-subcategory
+      vice = get_vice(plaid_transaction.category_hierarchy[0],
+                      plaid_transaction.category_hierarchy[1],
+                      plaid_transaction.category_hierarchy[2])
+      # Skip all Transactions that aren't classified as a particular Vice
+      next if vice.blank?
+      next unless self.vices.include? vice
+      # Create Transaction
+      transaction = Transaction.from_plaid(plaid_transaction)
+      transaction.account = account
+      transaction.vice = vice
+      transaction.user = self
+      transaction.save!
+    end
   end
 end

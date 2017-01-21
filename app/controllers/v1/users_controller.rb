@@ -34,7 +34,7 @@ class V1::UsersController < ApplicationController
 
   # GET /users/me/yearly_fund
   def get_yearly_fund
-    render json: @authed_user.yearly_fund(), status: :ok
+    render json: @authed_user.yearly_fund, status: :ok
   end
 
   # PUT /users/me/vices
@@ -97,7 +97,8 @@ class V1::UsersController < ApplicationController
                   end
       num_feelings = 5
       if bad_param || !feeling.between?(0, num_feelings)
-        (errors[:feeling] ||= []).push('must be a number between 0 and '+num_feelings.to_s)
+        (errors[:feeling] ||= []).push('must be a number between 0 and ' +
+                                       num_feelings.to_s)
       end
     else
       (errors[:feeling] ||= []).push('is required')
@@ -176,11 +177,9 @@ class V1::UsersController < ApplicationController
                                       options: options)
     rescue Plaid::PlaidError => e
       # Check if we should send notification for Plaid error
-      if plaid_error = get_plaid_error(e)
-        raise plaid_error
-      else
-        return render json: e.resolve, status: :bad_request
-      end
+      plaid_error = get_plaid_error(e)
+      raise plaid_error if plaid_error
+      return render json: e.resolve, status: :bad_request
     end
 
     ret = mfa_or_populate(@authed_user, plaid_user, params[:product],
@@ -225,15 +224,14 @@ class V1::UsersController < ApplicationController
     # We can do this because we validated for already-upgraded Banks
     existing_product = account.bank.plaid_auth ? :auth : :connect
     begin
-      existing_user = Plaid::User.load(existing_product, account.bank.access_token)
+      existing_user = Plaid::User.load(existing_product,
+                                       account.bank.access_token)
       new_user = existing_user.upgrade(product)
     rescue Plaid::PlaidError => e
       # Check if we should send notification for Plaid error
-      if plaid_error = get_plaid_error(e)
-        raise plaid_error
-      else
-        return render json: e.resolve, status: :bad_request
-      end
+      plaid_error = get_plaid_error(e)
+      raise plaid_error if plaid_error
+      return render json: e.resolve, status: :bad_request
     end
 
     ret = mfa_or_populate(@authed_user, new_user, params[:product])
@@ -255,8 +253,12 @@ class V1::UsersController < ApplicationController
     end
     if params[:answer].blank? && params[:mask].blank? && params[:type].blank?
       errors[:answer] = ['is required (unless selecting MFA method)']
-      errors[:mask] = ['can be submitted instead of answer to select MFA method']
-      errors[:type] = ['can be submitted instead of answer to select MFA method']
+      errors[:mask] = [
+        'can be submitted instead of answer to select MFA method'
+      ]
+      errors[:type] = [
+        'can be submitted instead of answer to select MFA method'
+      ]
     end
     raise BadRequest.new(errors) if errors.present?
 
@@ -265,11 +267,9 @@ class V1::UsersController < ApplicationController
       plaid_user = Plaid::User.load(product, params[:access_token])
     rescue Plaid::PlaidError => e
       # Check if we should send notification for Plaid error
-      if plaid_error = get_plaid_error(e)
-        raise plaid_error
-      else
-        return render json: e.resolve, status: :bad_request
-      end
+      plaid_error = get_plaid_error(e)
+      raise plaid_error if plaid_error
+      return render json: e.resolve, status: :bad_request
     end
 
     if params[:answer].present?
@@ -288,11 +288,9 @@ class V1::UsersController < ApplicationController
         plaid_user.mfa_step(params[:answer], options: options)
       rescue Plaid::PlaidError => e
         # Check if we should send notification for Plaid error
-        if plaid_error = get_plaid_error(e)
-          raise plaid_error
-        else
-          return render json: e.resolve, status: :bad_request
-        end
+        plaid_error = get_plaid_error(e)
+        raise plaid_error if plaid_error
+        return render json: e.resolve, status: :bad_request
       end
     else # Selecting send_method for MFA code
       method = if params[:mask].present?
@@ -305,11 +303,9 @@ class V1::UsersController < ApplicationController
         plaid_user.mfa_step(send_method: method, options: options)
       rescue Plaid::PlaidError => e
         # Check if we should send notification for Plaid error
-        if plaid_error = get_plaid_error(e)
-          raise plaid_error
-        else
-          return render json: e.resolve, status: :bad_request
-        end
+        plaid_error = get_plaid_error(e)
+        raise plaid_error if plaid_error
+        return render json: e.resolve, status: :bad_request
       end
     end
 
@@ -327,13 +323,11 @@ class V1::UsersController < ApplicationController
       errors[:bank_id] = ['is required']
     else
       bank = Bank.where(id: params[:bank_id]).first
-      if bank.blank? || bank.user != @authed_user
-        raise NotFound
-      end
+      raise NotFound if bank.blank? || bank.user != @authed_user
       if bank.name == 'usaa'
         errors[:pin] = ['is required for usaa'] if params[:pin].blank?
       end
-      if !bank.plaid_needs_reauth
+      unless bank.plaid_needs_reauth
         errors[:general] = ['Bank not in need of update']
       end
       if !bank.plaid_connect && !bank.plaid_auth
@@ -355,11 +349,9 @@ class V1::UsersController < ApplicationController
       plaid_user.update(params[:username].to_s, params[:password].to_s, pin)
     rescue Plaid::PlaidError => e
       # Check if we should send notification for Plaid error
-      if plaid_error = get_plaid_error(e)
-        raise plaid_error
-      else
-        return render json: e.resolve, status: :bad_request
-      end
+      plaid_error = get_plaid_error(e)
+      raise plaid_error if plaid_error
+      return render json: e.resolve, status: :bad_request
     end
 
     # Success, set bank reauth back to false
@@ -378,9 +370,10 @@ class V1::UsersController < ApplicationController
       validate_deduction_accounts_payload(params[:source], params[:deposit])
     tracking_accounts, e2 =
       validate_tracking_accounts_payload(params[:tracking])
-    errors = e1.merge(e2) { |k, o, n| o + n } # Key, old, new
+    errors = e1.merge(e2) { |_k, o, n| o + n } # Key, old, new
     if source_account.nil? && deposit_account.nil? && tracking_accounts.empty?
-      errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
+      errors[:general] = ['Missing parameter. Options are one or more of: '\
+                          "'source', 'deposit', 'tracking'"]
     end
     raise BadRequest.new(errors) if errors.present?
 
@@ -413,11 +406,10 @@ class V1::UsersController < ApplicationController
     end
     # Validate Tracking accounts
     tracking_accounts.each do |account|
-      if !account.bank.plaid_connect
-        (errors[:tracking] ||= []).push(
-          'Account with ID ' + account.id + ' must have Plaid Connect product'
-        )
-      end
+      next if account.bank.plaid_connect
+      (errors[:tracking] ||= []).push(
+        'Account with ID ' + account.id + ' must have Plaid Connect product'
+      )
     end
     # Report errors with Tracking/Source/Deposit Accounts
     raise BadRequest.new(errors) if errors.present?
@@ -429,10 +421,12 @@ class V1::UsersController < ApplicationController
     end
 
     # Set Tracking Accounts
-    tracking_accounts.each do |account|
-      account.tracking = true
-      account.save!
-    end if tracking_accounts
+    if tracking_accounts
+      tracking_accounts.each do |account|
+        account.tracking = true
+        account.save!
+      end
+    end
 
     @authed_user.reload
     render json: @authed_user, status: :ok
@@ -443,21 +437,17 @@ class V1::UsersController < ApplicationController
     # Validate client input and look up Account models
     tracking_accounts, errors =
       validate_tracking_accounts_payload(params[:tracking])
-    if !params.has_key?(:source) && !params.has_key?(:deposit) &&
-      tracking_accounts.empty?
+    if !params.key?(:source) && !params.key?(:deposit) &&
+       tracking_accounts.empty?
 
       errors[:general] = ["Missing parameter. Options are one or more of: 'source', 'deposit', 'tracking'"]
     end
     raise BadRequest.new(errors) unless errors.blank?
 
     # Remove Source/Deposit Accounts
-    if params.has_key?(:source) || params.has_key?(:deposit)
-      if params.has_key?(:source)
-        @authed_user.source_account = nil
-      end
-      if params.has_key?(:deposit)
-        @authed_user.deposit_account = nil
-      end
+    if params.key?(:source) || params.key?(:deposit)
+      @authed_user.source_account = nil if params.key?(:source)
+      @authed_user.deposit_account = nil if params.key?(:deposit)
       @authed_user.save!
       # Remove funding sources that are no longer identified as source/deposit
       @authed_user.reload
@@ -465,10 +455,12 @@ class V1::UsersController < ApplicationController
     end
 
     # Remove Tracking Accounts
-    tracking_accounts.each do |account|
-      account.tracking = false
-      account.save!
-    end if tracking_accounts
+    if tracking_accounts
+      tracking_accounts.each do |account|
+        account.tracking = false
+        account.save!
+      end
+    end
 
     render json: @authed_user, status: :ok
   end
@@ -476,9 +468,7 @@ class V1::UsersController < ApplicationController
   def dwolla
     # Validate payload, optionally including storing address
     errors = {}
-    unless params[:ssn]
-      errors[:ssn] = ['is required']
-    end
+    errors[:ssn] = ['is required'] unless params[:ssn]
     addr = @authed_user.address
     unless addr
       if params[:address].present?
@@ -604,9 +594,9 @@ class V1::UsersController < ApplicationController
     @authed_user.transactions.destroy_all
 
     vices = []
-    vice_coffeeshops = Vice.find_by(name: "CoffeeShops")
+    vice_coffeeshops = Vice.find_by(name: 'CoffeeShops')
     vices.push vice_coffeeshops
-    vice_electronics = Vice.find_by(name: "Electronics")
+    vice_electronics = Vice.find_by(name: 'Electronics')
     vices.push vice_electronics
     @authed_user.vices << vices
 
@@ -620,7 +610,8 @@ class V1::UsersController < ApplicationController
       account_num: '9900009606',
       routing_num: '021000021',
       account_type: 'depository',
-      account_subtype: 'savings')
+      account_subtype: 'savings'
+    )
     account_savings.bank = bank
     account_savings.save!
     @authed_user.deposit_account = account_savings
@@ -631,7 +622,8 @@ class V1::UsersController < ApplicationController
       account_num: '1234567890',
       routing_num: '222222226',
       account_type: 'depository',
-      account_subtype: 'checking')
+      account_subtype: 'checking'
+    )
     account_checking.bank = bank
     account_checking.save!
     @authed_user.source_account = account_checking
@@ -642,27 +634,30 @@ class V1::UsersController < ApplicationController
       date: DateTime.current,
       amount: 13.37,
       name: 'Python Sticker',
-      category_id: '19013000')
+      category_id: '19013000'
+    )
     transaction.account = account_savings
     transaction.vice = vice_electronics
     transaction.save!
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'bar',
-      date: DateTime.current-2.days,
+      date: DateTime.current - 2.days,
       amount: 710.51,
       name: 'Microsoft Store',
-      category_id: '19013000')
+      category_id: '19013000'
+    )
     transaction.account = account_savings
     transaction.vice = vice_electronics
     transaction.save!
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'KdDjmojBERUKx3JkDdO5IaRJdZeZKNuK4bnKJ1',
-      date: DateTime.current-4.days,
+      date: DateTime.current - 4.days,
       amount: 2307.15,
       name: 'Apple Store',
-      category_id: '19013000')
+      category_id: '19013000'
+    )
     transaction.account = account_savings
     transaction.vice = vice_electronics
     transaction.backed_out = true
@@ -670,20 +665,22 @@ class V1::UsersController < ApplicationController
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'DAE3Yo3wXgskjXV1JqBDIrDBVvjMLDCQ4rMQdR',
-      date: DateTime.current-7.days,
+      date: DateTime.current - 7.days,
       amount: 4.19,
       name: 'Gregorys Coffee',
-      category_id: '13005043')
+      category_id: '13005043'
+    )
     transaction.account = account_checking
     transaction.vice = vice_coffeeshops
     transaction.save!
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'moPE4dE1yMHJX5pmRzwrcvpQqPdDnZHEKPREYL',
-      date: DateTime.current-8.days,
+      date: DateTime.current - 8.days,
       amount: 7.23,
       name: 'Krankies Coffee',
-      category_id: '13005043')
+      category_id: '13005043'
+    )
     transaction.account = account_savings
     transaction.vice = vice_coffeeshops
     transaction.backed_out = true
@@ -692,10 +689,11 @@ class V1::UsersController < ApplicationController
     amount = 5.32
     transaction = @authed_user.transactions.new(
       plaid_id: 'JmN0JX0q5EcaQJM9ZbOwUYyyp607m4u3PR63Vn',
-      date: DateTime.current-13.days,
+      date: DateTime.current - 13.days,
       amount: amount,
       name: 'Octane Coffee Bar and Lounge',
-      category_id: '13005043')
+      category_id: '13005043'
+    )
     transaction.account = account_savings
     transaction.vice = vice_coffeeshops
     amount = amount * @authed_user.invest_percent / 100.0
@@ -713,10 +711,11 @@ class V1::UsersController < ApplicationController
 
     transaction = @authed_user.transactions.new(
       plaid_id: 'baz',
-      date: DateTime.current-15.days,
+      date: DateTime.current - 15.days,
       amount: 6.78,
       name: 'Moar Electronics',
-      category_id: '13005043')
+      category_id: '13005043'
+    )
     transaction.account = account_savings
     transaction.vice = vice_electronics
     transaction.save!
@@ -781,7 +780,7 @@ class V1::UsersController < ApplicationController
       # specified or set up with Dwolla, this call will do nothing. For now,
       # we will ignore the return value of this method.
       unless @authed_user.dwolla_transfer(amount_to_invest)
-        logger.info "Cannot dev_deduct - Dwolla not set up"
+        logger.info 'Cannot dev_deduct - Dwolla not set up'
       end
 
       # Step 3: Mark all Transactions in transactions_to_invest as 'invested'.
@@ -826,9 +825,7 @@ class V1::UsersController < ApplicationController
 
   def dev_notify
     if params[:title].blank? && params[:body].blank?
-      unless weekly_notification(@authed_user, 12.34)
-        raise InternalServerError
-      end
+      raise InternalServerError unless weekly_notification(@authed_user, 12.34)
       return render json: { 'notification' => 'sent' }, status: :ok
     end
 
@@ -867,35 +864,33 @@ class V1::UsersController < ApplicationController
 
   def validate_deduction_accounts_payload(source, deposit)
     errors = {}
-    if !source.nil?
+    unless source.nil?
       if source.is_a?(String)
         source_account = Account.find_by(id: source)
-        if source_account.nil?
-          errors[:source] = ['Account not found']
-        end
+        errors[:source] = ['Account not found'] if source_account.nil?
       else
         errors[:source] = ['is incorrectly formatted - must be of type String']
       end
     end
-    if !deposit.nil?
+    unless deposit.nil?
       if deposit.is_a?(String)
         deposit_account = Account.find_by(id: deposit)
-        if deposit_account.nil?
-          errors[:deposit] = ['Account not found']
-        end
+        errors[:deposit] = ['Account not found'] if deposit_account.nil?
       else
         errors[:deposit] = ['is incorrectly formatted - must be of type String']
       end
     end
 
     # Tuples require 'return' keyword
+    # rubocop:disable RedundantReturn
     return source_account, deposit_account, errors
+    # rubocop:enable RedundantReturn
   end
 
   def validate_tracking_accounts_payload(tracking)
     errors = {}
     tracking_accounts = []
-    if !tracking.nil?
+    unless tracking.nil?
       if tracking.is_a?(Array)
         tracking.each do |tracking_account_id|
           tracking_account = Account.find_by(id: tracking_account_id)
@@ -911,6 +906,8 @@ class V1::UsersController < ApplicationController
     end
 
     # Tuples require 'return' keyword
+    # rubocop:disable RedundantReturn
     return tracking_accounts, errors
+    # rubocop:enable RedundantReturn
   end
 end

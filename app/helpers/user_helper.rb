@@ -51,7 +51,7 @@ module UserHelper
       return nil
     end
 
-    return case e
+    case e
     when Plaid::BadRequestError
       BadRequest.new(errors)
     when Plaid::UnauthorizedError
@@ -76,12 +76,14 @@ module UserHelper
     plaid_user.accounts.each do |plaid_account|
       # Get existing Account or create new one
       account = nil
-      user.accounts.each do |user_account|
-        if plaid_account.id == user_account.plaid_id
-          account = user_account
-          break
+      if user.accounts
+        user.accounts.each do |user_account|
+          if plaid_account.id == user_account.plaid_id
+            account = user_account
+            break
+          end
         end
-      end if user.accounts
+      end
       # Create new Account if one wasn't found in loop above
       unless account
         account = user.accounts.new
