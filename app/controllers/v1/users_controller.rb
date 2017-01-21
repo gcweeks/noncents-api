@@ -609,6 +609,8 @@ class V1::UsersController < ApplicationController
       institution: 'fake_institution',
       account_num: '9900009606',
       routing_num: '021000021',
+      available_balance: 1203.42,
+      current_balance: 1274.93,
       account_type: 'depository',
       account_subtype: 'savings'
     )
@@ -621,6 +623,8 @@ class V1::UsersController < ApplicationController
       institution: 'fake_institution',
       account_num: '1234567890',
       routing_num: '222222226',
+      available_balance: 1081.78,
+      current_balance: 1253.32,
       account_type: 'depository',
       account_subtype: 'checking'
     )

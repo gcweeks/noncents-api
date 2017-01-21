@@ -98,6 +98,10 @@ module UserHelper
       account.account_type = plaid_account.type.to_s
       account.account_subtype = plaid_account.subtype
       account.institution = plaid_account.institution.to_s
+      account.current_balance = plaid_account.current_balance
+      if plaid_account.available_balance
+        account.available_balance = plaid_account.available_balance
+      end
       if plaid_account.numbers.present? # Auth
         account.routing_num = plaid_account.numbers[:routing]
         account.account_num = plaid_account.numbers[:account]
