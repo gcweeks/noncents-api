@@ -44,7 +44,7 @@ module UserHelper
     }
     # Don't send Slack notifications for common cases
     common = [
-      1200 # invalid credentials
+      1200, 1201, 1202 # invalid credentials
     ]
     if common.include? e.code
       logger.info errors

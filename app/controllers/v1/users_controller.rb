@@ -179,7 +179,8 @@ class V1::UsersController < ApplicationController
       # Check if we should send notification for Plaid error
       plaid_error = get_plaid_error(e)
       raise plaid_error if plaid_error
-      return render json: e.resolve, status: :bad_request
+      errors = { 'resolve' => e.resolve }
+      return render json: errors, status: :bad_request
     end
 
     ret = mfa_or_populate(@authed_user, plaid_user, params[:product],
@@ -231,7 +232,8 @@ class V1::UsersController < ApplicationController
       # Check if we should send notification for Plaid error
       plaid_error = get_plaid_error(e)
       raise plaid_error if plaid_error
-      return render json: e.resolve, status: :bad_request
+      errors = { 'resolve' => e.resolve }
+      return render json: errors, status: :bad_request
     end
 
     ret = mfa_or_populate(@authed_user, new_user, params[:product])
@@ -269,7 +271,8 @@ class V1::UsersController < ApplicationController
       # Check if we should send notification for Plaid error
       plaid_error = get_plaid_error(e)
       raise plaid_error if plaid_error
-      return render json: e.resolve, status: :bad_request
+      errors = { 'resolve' => e.resolve }
+      return render json: errors, status: :bad_request
     end
 
     if params[:answer].present?
@@ -290,7 +293,8 @@ class V1::UsersController < ApplicationController
         # Check if we should send notification for Plaid error
         plaid_error = get_plaid_error(e)
         raise plaid_error if plaid_error
-        return render json: e.resolve, status: :bad_request
+        errors = { 'resolve' => e.resolve }
+        return render json: errors, status: :bad_request
       end
     else # Selecting send_method for MFA code
       method = if params[:mask].present?
@@ -305,7 +309,8 @@ class V1::UsersController < ApplicationController
         # Check if we should send notification for Plaid error
         plaid_error = get_plaid_error(e)
         raise plaid_error if plaid_error
-        return render json: e.resolve, status: :bad_request
+        errors = { 'resolve' => e.resolve }
+        return render json: errors, status: :bad_request
       end
     end
 
@@ -351,7 +356,8 @@ class V1::UsersController < ApplicationController
       # Check if we should send notification for Plaid error
       plaid_error = get_plaid_error(e)
       raise plaid_error if plaid_error
-      return render json: e.resolve, status: :bad_request
+      errors = { 'resolve' => e.resolve }
+      return render json: errors, status: :bad_request
     end
 
     # Success, set bank reauth back to false
