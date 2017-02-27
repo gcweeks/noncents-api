@@ -311,9 +311,11 @@ class User < ApplicationRecord
       self.populate_accounts(plaid_user)
       return txs
     rescue Plaid::PlaidError => e
-      if e.code == 1200 || 1201 || 1202 || 1209 || # Invalid credentials
-         e.code == 1203 || 1208 || 1215 || # MFA
-         e.code == 1205 || 1206 # Account issue
+      if [
+        1200, 1201, 1202, 1209, # Invalid credentials
+        1203, 1208, 1215, # MFA
+        1205, 1206 # Account issue
+      ].include? e.code
 
         # Plaid broken, need to submit PATCH call to resolve
         bank.plaid_needs_reauth = true
