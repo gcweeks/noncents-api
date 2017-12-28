@@ -20,11 +20,11 @@ gem 'bcrypt', '~> 3.1.11'
 # gem 'rack-cors'
 
 # Plaid
-gem 'plaid'
+gem 'plaid', '~> 3.0'
 # Twilio
-gem 'twilio-ruby', '~> 4.0'
+gem 'twilio-ruby', '~> 5.6.0'
 # Dwolla
-gem 'dwolla_v2', '~> 1.1'
+gem 'dwolla_v2', '~> 2.0.2'
 # AWS SES
 gem 'aws-ses', '~> 0.6.0', :require => 'aws/ses'
 # Rack Attack
@@ -44,15 +44,16 @@ group :development, :test do
 end
 
 group :development do
-  gem 'listen', '~> 3.0.5'
+  gem 'listen', '~> 3.0'
   # Spring speeds up development by keeping your application running in the background. Read more: https://github.com/rails/spring
   gem 'spring'
   gem 'spring-watcher-listen', '~> 2.0.0'
   # Use Puma as the app server
   # gem 'puma', '~> 3.0'
   # Use Passenger as the app server
-  gem 'passenger', '~> 5.0'
+  gem 'passenger', '~> 5.1'
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+

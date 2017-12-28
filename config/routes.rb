@@ -6,7 +6,7 @@ Rails.application.routes.draw do
     # Calls that do not requre an access token
     get  '/'                        => 'api#request_get'
     post '/'                        => 'api#request_post'
-    get  'auth'                     => 'api#auth'
+    post 'auth'                     => 'api#auth'
     post 'reset_password'           => 'api#reset_password'
     put  'update_password'          => 'api#update_password'
     get  'check_email'              => 'api#check_email'

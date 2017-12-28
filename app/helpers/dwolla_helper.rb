@@ -3,7 +3,7 @@ module DwollaHelper
   include DwollaTokenConcern
   include SlackHelper
 
-  @@url = 'https://api-uat.dwolla.com/'
+  @@url = 'https://api-sandbox.dwolla.com/'
   # TODO: if account_token.client.environment == :production
   # 'https://api.dwolla.com/'
 
@@ -35,7 +35,7 @@ module DwollaHelper
     response = self.post(route, payload)
 
     if response.class == DwollaV2::Response
-      ret = response.headers['location']
+      ret = response.response_headers['location']
       unless ret && ret.slice!(@@url + 'customers/')
         log_error('DwollaHelper.add_customer - Couldn\'t slice', response)
         return nil
@@ -82,7 +82,7 @@ module DwollaHelper
     response = self.post(route, file: file, documentType: type)
 
     if response.class == DwollaV2::Response
-      ret = response.headers['location']
+      ret = response.response_headers['location']
       unless ret && ret.slice!(@@url + 'documents/')
         log_error('DwollaHelper.submit_document - Couldn\'t slice', response)
         return nil
@@ -159,7 +159,7 @@ module DwollaHelper
     end
 
     if response.class == DwollaV2::Response
-      ret = response.headers['location']
+      ret = response.response_headers['location']
       unless ret && ret.slice!(@@url + 'funding-sources/')
         log_error('DwollaHelper.add_funding_source - Couldn\'t slice ret', response)
         return nil
@@ -210,7 +210,7 @@ module DwollaHelper
 
       payload = { :removed => true }
       response = self.post('funding-sources/' + funding_source_id, payload)
-      unless response.status == 200
+      unless response.response_status == 200
         log_error('DwollaHelper.remove_funding_sources - Couldn\t remove', response)
         return false
       end
@@ -288,12 +288,12 @@ module DwollaHelper
     #}
     response = self.post('transfers', payload)
 
-    unless response && response.status == 201
+    unless response && response.response_status == 201
       log_error('DwollaHelper.perform_transfer - Error', response)
       return nil
     end
 
-    ret = response.headers['location']
+    ret = response.response_headers['location']
     unless ret && ret.slice!(@@url + 'transfers/')
       log_error('DwollaHelper.perform_transfer - Couldn\'t slice ret', response)
       return nil

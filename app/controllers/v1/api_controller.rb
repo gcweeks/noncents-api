@@ -31,7 +31,6 @@ class V1::ApiController < ApplicationController
   def auth
     # Alternative to users_get call that returns the User token in addition to
     # the rest of the model, provided proper authentication is given.
-
     unless request.headers['Content-Type'] == 'application/x-www-form-urlencoded'
       error_array = ['must be application/x-www-form-urlencoded']
       if request.headers['Content-Type'].present?

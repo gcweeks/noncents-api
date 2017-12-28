@@ -19,7 +19,7 @@ class ActiveSupport::TestCase
 
   # Stubs
 
-  def stub_dwolla(method, path, body: {}, query: {}, status: 200, response: nil, response_headers: nil, host: 'api-uat.dwolla.com')
+  def stub_dwolla(method, path, body: {}, query: {}, status: 200, response: nil, response_headers: nil, host: 'api-sandbox.dwolla.com')
     headers = {}
     headers['Accept'] = 'application/vnd.dwolla.v1.hal+json'
 
@@ -44,7 +44,7 @@ class ActiveSupport::TestCase
   def initialize_dwolla_stubs(user)
     initial_json = fixture_json('dwolla_add_customer')
     dwolla_id = initial_json['location'].clone
-    dwolla_id.slice!('https://api-uat.dwolla.com/customers/')
+    dwolla_id.slice!('https://api-sandbox.dwolla.com/customers/')
 
     # Add Customer
     json = initial_json.to_json
@@ -109,7 +109,7 @@ class ActiveSupport::TestCase
     body = { removed: true }
     source_id = destination_id = nil
     fs_json.each do |fs|
-      initial_json['_links']['self']['href'] = 'https://api-uat.dwolla.com/funding-sources/'+fs['id']
+      initial_json['_links']['self']['href'] = 'https://api-sandbox.dwolla.com/funding-sources/'+fs['id']
       initial_json['id'] = fs['id']
       initial_json['name'] = fs['name']
       if fs['name'] == 'Plaid Checking'

@@ -213,7 +213,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
 
     # Assert new password works and old one doesn't
     host! 'localhost:3000/v1/'
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: password
@@ -222,7 +222,7 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal @user.token, res['token']
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: @user.password
@@ -1341,10 +1341,10 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     body = {
       _links: {
         source: {
-          href: "https://api-uat.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
+          href: "https://api-sandbox.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
         },
         destination: {
-          href: "https://api-uat.dwolla.com/funding-sources/"+balance
+          href: "https://api-sandbox.dwolla.com/funding-sources/"+balance
         }
       },
       amount: {
@@ -1353,8 +1353,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       }
     }
     stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
-    body[:_links][:source] = "https://api-uat.dwolla.com/funding-sources/"+balance
-    body[:_links][:destination] = "https://api-uat.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
+    body[:_links][:source] = "https://api-sandbox.dwolla.com/funding-sources/"+balance
+    body[:_links][:destination] = "https://api-sandbox.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
     # Returns same transfer ID (json), but that shouldn't matter
     stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
 
@@ -1472,10 +1472,10 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
     body = {
       _links: {
         source: {
-          href: "https://api-uat.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
+          href: "https://api-sandbox.dwolla.com/funding-sources/"+@user.source_account.dwolla_id
         },
         destination: {
-          href: "https://api-uat.dwolla.com/funding-sources/"+balance
+          href: "https://api-sandbox.dwolla.com/funding-sources/"+balance
         }
       },
       amount: {
@@ -1484,8 +1484,8 @@ class V1::UsersControllerTest < ActionDispatch::IntegrationTest
       }
     }
     stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
-    body[:_links][:source] = "https://api-uat.dwolla.com/funding-sources/"+balance
-    body[:_links][:destination] = "https://api-uat.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
+    body[:_links][:source] = "https://api-sandbox.dwolla.com/funding-sources/"+balance
+    body[:_links][:destination] = "https://api-sandbox.dwolla.com/funding-sources/"+@user.deposit_account.dwolla_id
     # Returns same transfer ID (json), but that shouldn't matter
     stub_dwolla :post, 'transfers', body: body, status: 201, response_headers: json
 

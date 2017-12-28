@@ -32,7 +32,7 @@ module TwilioHelper
     client = Twilio::REST::Client.new @TWILIO_SID, @TWILIO_TOKEN
     # Send message
     begin
-      client.account.messages.create(
+      client.api.account.messages.create(
         from: twilio_number,
         to: to,
         body: body

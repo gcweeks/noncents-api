@@ -27,17 +27,17 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
 
   test 'should auth' do
     assert_equal AuthEvent.all.count, 0
-    get 'auth', params: { user: { email: @user.email, password: 'incorrect' } }
+    post 'auth', params: { user: { email: @user.email, password: 'incorrect' } }
     assert_response :unauthorized
     assert_equal AuthEvent.all.count, 1
     auth_event_1 = AuthEvent.all[0]
     assert_equal auth_event_1.user.id, @user.id
     assert_equal auth_event_1.success, false
     assert_equal auth_event_1.ip_address.to_s, @response.request.ip
-    get 'auth', params: { user: { email: 'does@not.exist', password: 'incorrect' } }
+    post 'auth', params: { user: { email: 'does@not.exist', password: 'incorrect' } }
     assert_response :not_found
     assert_equal AuthEvent.all.count, 1
-    get 'auth', params: { user: { email: @user.email, password: @user.password } }
+    post 'auth', params: { user: { email: @user.email, password: @user.password } }
     assert_response :success
     assert_equal AuthEvent.all.count, 2
     auth_event_2 = AuthEvent.all.where.not(id: auth_event_1.id).first
@@ -112,7 +112,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
 
 
     # Assert old password still works and new one doesn't
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: @user.password
@@ -121,7 +121,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal @user.token, res['token']
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: password
@@ -140,7 +140,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     # Assert new password works and old one doesn't
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: password
@@ -149,7 +149,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     res = JSON.parse(@response.body)
     assert_equal @user.token, res['token']
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: @user.password
@@ -171,7 +171,7 @@ class V1::ApiControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
 
     # Assert password hasn't changed
-    get 'auth', params: {
+    post 'auth', params: {
       user: {
         email: @user.email,
         password: password

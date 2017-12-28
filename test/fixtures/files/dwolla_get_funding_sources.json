@@ -1,12 +1,12 @@
 {
   "_links": {
     "self": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "funding-source"
     },
     "customer": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "customer"
     }
@@ -16,12 +16,12 @@
       {
         "_links": {
           "self": {
-            "href": "https://api-uat.dwolla.com/funding-sources/00ce7f94-9343-4852-a4ee-61b69bbda546",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/00ce7f94-9343-4852-a4ee-61b69bbda546",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "funding-source"
           },
           "customer": {
-            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "customer"
           }
@@ -39,12 +39,12 @@
       {
         "_links": {
           "self": {
-            "href": "https://api-uat.dwolla.com/funding-sources/0a458ebc-3abd-4350-a2af-d9f325302627",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/0a458ebc-3abd-4350-a2af-d9f325302627",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "funding-source"
           },
           "customer": {
-            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "customer"
           }
@@ -62,12 +62,12 @@
       {
         "_links": {
           "self": {
-            "href": "https://api-uat.dwolla.com/funding-sources/f269d27d-3a71-4dff-ab71-b34483136ae4",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/f269d27d-3a71-4dff-ab71-b34483136ae4",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "funding-source"
           },
           "customer": {
-            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "customer"
           }
@@ -85,22 +85,22 @@
       {
         "_links": {
           "self": {
-            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "funding-source"
           },
           "customer": {
-            "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+            "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "customer"
           },
           "with-available-balance": {
-            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "funding-source"
           },
           "balance": {
-            "href": "https://api-uat.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105/balance",
+            "href": "https://api-sandbox.dwolla.com/funding-sources/91a45bda-d04f-44dd-ba05-a26f24247105/balance",
             "type": "application/vnd.dwolla.v1.hal+json",
             "resource-type": "balance"
           }

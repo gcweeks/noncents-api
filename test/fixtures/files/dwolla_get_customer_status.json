@@ -1,37 +1,37 @@
 {
   "_links": {
     "self": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "customer"
     },
     "receive": {
-      "href": "https://api-uat.dwolla.com/transfers",
+      "href": "https://api-sandbox.dwolla.com/transfers",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "transfer"
     },
     "edit-form": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
       "type": "application/vnd.dwolla.v1.hal+json; profile=\"https://github.com/dwolla/hal-forms\"",
       "resource-type": "customer"
     },
     "edit": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "customer"
     },
     "funding-sources": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/funding-sources",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "funding-source"
     },
     "transfers": {
-      "href": "https://api-uat.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/transfers",
+      "href": "https://api-sandbox.dwolla.com/customers/8c100e30-a2db-4bfc-8134-ddf8013a0f3a/transfers",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "transfer"
     },
     "send": {
-      "href": "https://api-uat.dwolla.com/transfers",
+      "href": "https://api-sandbox.dwolla.com/transfers",
       "type": "application/vnd.dwolla.v1.hal+json",
       "resource-type": "transfer"
     }
