@@ -2,3 +2,8 @@
 
 {<img src="https://codeship.com/projects/079d62c0-0408-0134-be25-06dd406ffa5b/status?branch=master" alt="Status?branch=master" />}[https://codeship.com/projects/154036]
 
+Make sure /etc/environment is populated with proper variables
+
+Add postgres with:
+sudo -u postgres psql postgres
+=> create role noncents with superuser createdb login password '789789'

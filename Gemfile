@@ -37,6 +37,8 @@ gem 'exception_notification'
 gem 'attr_encrypted', '~> 3.0.0'
 # mock/stub
 gem 'webmock'
+# Bug in 5.11
+gem 'minitest', '~> 5.10.3'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
